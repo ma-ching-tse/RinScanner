@@ -1,0 +1,18 @@
+{
+  "name": "bitmart-token-scanner",
+  "version": "0.1.0",
+  "description": "Figma plugin that scans the current page for color and typography values not bound to design tokens.",
+  "private": true,
+  "scripts": {
+    "build:code": "esbuild src/code.ts --bundle --platform=browser --target=es2017 --outfile=dist/code.js",
+    "build:ui": "esbuild src/ui/main.ts --bundle --platform=browser --target=es2017 --outfile=dist/ui.js",
+    "build:html": "node scripts/build-html.js",
+    "build": "npm run build:code && npm run build:ui && npm run build:html",
+    "watch": "npm run build && npm run build:code -- --watch & npm run build:ui -- --watch"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.100.0",
+    "esbuild": "^0.21.0",
+    "typescript": "^5.4.0"
+  }
+}
