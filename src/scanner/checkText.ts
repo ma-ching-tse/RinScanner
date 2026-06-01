@@ -27,6 +27,7 @@ export function checkTextNode(
       id: `${node.id}:text`,
       nodeId: node.id,
       nodeName: node.name,
+      category: 'token',
       kind: 'text',
       currentValue: 'Mixed values — needs manual review',
     };
@@ -47,6 +48,7 @@ export function checkTextNode(
       id: `${node.id}:text`,
       nodeId: node.id,
       nodeName: node.name,
+      category: 'token',
       kind: 'text',
       currentValue: current,
       suggestion,
@@ -66,6 +68,7 @@ export function checkTextNode(
     id: `${node.id}:text`,
     nodeId: node.id,
     nodeName: node.name,
+    category: 'token',
     kind: 'text',
     currentValue: current,
     candidates: candidates.length > 0 ? candidates : undefined,

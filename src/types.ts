@@ -60,7 +60,25 @@ export interface TextStyleToken {
   fingerprint: string;
 }
 
-export type ViolationKind = 'color-fill' | 'color-stroke' | 'text';
+export type IssueCategory = 'token' | 'autolayout' | 'naming';
+
+export type ViolationKind =
+  | 'color-fill'
+  | 'color-stroke'
+  | 'text'
+  | 'autolayout-group'
+  | 'autolayout-none'
+  | 'naming-default';
+
+export type FixKind = 'apply-token' | 'add-autolayout' | 'convert-group' | 'rename';
+
+export interface FixInfo {
+  kind: FixKind;
+  /** Beta = best-effort, may rearrange / not be perfect; user should eyeball + undo. */
+  beta?: boolean;
+  /** Proposed new name for a rename fix. */
+  rename?: string;
+}
 
 export interface Suggestion {
   tokenId: string;
@@ -73,13 +91,16 @@ export interface Violation {
   id: string;
   nodeId: string;
   nodeName: string;
+  category: IssueCategory;
   kind: ViolationKind;
   currentValue: string;
+  message?: string;
   paintIndex?: number;
   colorHex?: string;
   colorAlpha?: number;
   suggestion?: Suggestion;
   candidates?: Suggestion[];
+  fix?: FixInfo;
 }
 
 export type PlatformFilterValue = 'APP' | 'Web' | 'Both';
@@ -91,7 +112,8 @@ export type UIMessage =
   | { type: 'addSelectedToWhitelist' }
   | { type: 'removeFromWhitelist'; name: string }
   | { type: 'selectNode'; nodeId: string }
-  | { type: 'applyFix'; violationId: string; tokenId: string };
+  | { type: 'applyFix'; violationId: string; tokenId: string }
+  | { type: 'applyLayoutFix'; violationId: string };
 
 export interface TextStyleSummary {
   id: string;

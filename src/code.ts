@@ -1,6 +1,7 @@
 import { loadTokenIndex, toTextStyleSummary } from './scanner/loadTokens';
 import { resolveWhitelistName, scanSelection } from './scanner/walkNodes';
 import { applyFix } from './fixer/applyFix';
+import { applyLayoutFix } from './fixer/applyLayoutFix';
 import { hasPlatformDivergence } from './tokens/bmds';
 import { PlatformFilterValue, PluginMessage, UIMessage, Violation } from './types';
 import type { TokenIndex } from './scanner/loadTokens';
@@ -165,6 +166,26 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       try {
         await applyFix(v, msg.tokenId);
         violationsById.delete(msg.violationId);
+        post({ type: 'fixApplied', violationId: msg.violationId, ok: true });
+      } catch (err) {
+        post({
+          type: 'fixApplied',
+          violationId: msg.violationId,
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    } else if (msg.type === 'applyLayoutFix') {
+      const v = violationsById.get(msg.violationId);
+      if (!v) {
+        post({ type: 'fixApplied', violationId: msg.violationId, ok: false, error: 'Violation not found' });
+        return;
+      }
+      try {
+        const node = await applyLayoutFix(v);
+        violationsById.delete(msg.violationId);
+        figma.currentPage.selection = [node];
+        figma.viewport.scrollAndZoomIntoView([node]);
         post({ type: 'fixApplied', violationId: msg.violationId, ok: true });
       } catch (err) {
         post({

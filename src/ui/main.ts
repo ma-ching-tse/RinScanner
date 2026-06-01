@@ -90,6 +90,11 @@ function renderSuggestion(v: Violation): string {
 }
 
 function renderCard(v: Violation): string {
+  if (v.category === 'token') return renderTokenCard(v);
+  return renderStructuralCard(v);
+}
+
+function renderTokenCard(v: Violation): string {
   const isColor = v.kind !== 'text';
   const swatch = isColor
     ? swatchHtml(v.colorHex ?? '#000000', v.colorAlpha ?? 1, v.currentValue, '')
@@ -109,6 +114,32 @@ function renderCard(v: Violation): string {
       <div class="actions">
         <button class="btn" data-action="locate" data-node="${v.nodeId}">定位</button>
         ${applyBtn}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderStructuralCard(v: Violation): string {
+  const isLayout = v.category === 'autolayout';
+  const icon = isLayout ? '▦' : '⌶';
+  const kindLabel =
+    v.kind === 'autolayout-group' ? 'Group' : v.kind === 'autolayout-none' ? '无 auto-layout' : '默认命名';
+
+  let fixBtn = '';
+  if (v.fix && (v.fix.kind === 'add-autolayout' || v.fix.kind === 'convert-group')) {
+    const label = v.fix.kind === 'convert-group' ? '转成 Frame' : '加 auto-layout';
+    const beta = v.fix.beta ? `<span class="beta-tag">Beta</span>` : '';
+    fixBtn = `<button class="btn primary" data-action="apply-layout" data-id="${v.id}">${label}${beta}</button>`;
+  }
+
+  return `<div class="card" data-violation="${v.id}">
+    <div class="swatch struct-ic">${icon}</div>
+    <div class="card-body">
+      <div class="card-title">${escape(v.nodeName)} <span style="color:var(--text-secondary);font-weight:400">· ${kindLabel}</span></div>
+      <div class="card-meta">${escape(v.message ?? v.currentValue)}</div>
+      <div class="actions">
+        <button class="btn" data-action="locate" data-node="${v.nodeId}">定位</button>
+        ${fixBtn}
       </div>
     </div>
   </div>`;
@@ -277,8 +308,10 @@ function render() {
     return;
   }
 
-  const colorViolations = state.violations.filter((v) => v.kind !== 'text');
+  const colorViolations = state.violations.filter((v) => v.kind === 'color-fill' || v.kind === 'color-stroke');
   const textViolations = state.violations.filter((v) => v.kind === 'text');
+  const layoutViolations = state.violations.filter((v) => v.category === 'autolayout');
+  const namingViolations = state.violations.filter((v) => v.category === 'naming');
   const pct = state.progress.total > 0 ? Math.round((state.progress.processed / state.progress.total) * 100) : 0;
   const scanning = state.status === 'scanning';
 
@@ -294,28 +327,26 @@ function render() {
   const stats =
     state.status === 'done'
       ? `<div class="stats">
-          <span><strong>${state.violations.length}</strong> 处违规</span>
-          <span><strong>${colorViolations.length}</strong> 颜色</span>
-          <span><strong>${textViolations.length}</strong> 字体</span>
-          <span>扫描范围: ${escape(state.scanScope ?? '')} · ${state.scanned} 节点${state.scanSkipped > 0 ? ` · 已忽略 ${state.scanSkipped}` : ''}</span>
+          <span><strong>${state.violations.length}</strong> 处</span>
+          <span>${colorViolations.length} 颜色 · ${textViolations.length} 字体 · ${layoutViolations.length} 布局 · ${namingViolations.length} 命名</span>
+          <span>${escape(state.scanScope ?? '')} · ${state.scanned} 节点${state.scanSkipped > 0 ? ` · 已忽略 ${state.scanSkipped}` : ''}</span>
         </div>`
       : state.status === 'idle'
         ? `<div class="stats">${selectionHint}</div>`
         : `<div class="stats">扫描中… ${state.progress.processed}/${state.progress.total}</div>`;
 
+  const groupBlock = (title: string, items: Violation[]) =>
+    items.length > 0 ? `<div class="group">${title} (${items.length})</div>${items.map(renderCard).join('')}` : '';
+
   let listHtml = '';
   if (state.status === 'done') {
     if (state.violations.length === 0) {
-      listHtml = `<div class="empty">🎉 当前页面所有颜色和字体都已绑定到 token。</div>`;
+      listHtml = `<div class="empty">🎉 选区内颜色、字体、布局、命名都没发现问题。</div>`;
     } else {
-      if (colorViolations.length > 0) {
-        listHtml += `<div class="group">颜色 (${colorViolations.length})</div>`;
-        listHtml += colorViolations.map(renderCard).join('');
-      }
-      if (textViolations.length > 0) {
-        listHtml += `<div class="group">字体 (${textViolations.length})</div>`;
-        listHtml += textViolations.map(renderCard).join('');
-      }
+      listHtml += groupBlock('颜色', colorViolations);
+      listHtml += groupBlock('字体', textViolations);
+      listHtml += groupBlock('布局 (auto-layout)', layoutViolations);
+      listHtml += groupBlock('命名', namingViolations);
     }
   } else if (state.status === 'idle') {
     listHtml = `<div class="empty">在 Figma 画布上选中一个或多个画板/节点，然后点上方「扫描选中画板」。</div>`;
@@ -394,6 +425,8 @@ root.addEventListener('click', (e) => {
     send({ type: 'selectNode', nodeId: btn.dataset.node! });
   } else if (action === 'apply') {
     send({ type: 'applyFix', violationId: btn.dataset.id!, tokenId: btn.dataset.token! });
+  } else if (action === 'apply-layout') {
+    send({ type: 'applyLayoutFix', violationId: btn.dataset.id! });
   } else if (action === 'view-tokens') {
     state.view = 'tokens';
     render();

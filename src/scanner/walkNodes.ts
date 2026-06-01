@@ -2,6 +2,8 @@ import { Violation } from '../types';
 import { TokenIndex } from './loadTokens';
 import { checkNodeColors } from './checkColor';
 import { checkTextNode } from './checkText';
+import { checkNodeLayout } from './checkLayout';
+import { checkNodeNaming } from './checkNaming';
 
 const SCANNABLE_TYPES: NodeType[] = [
   'TEXT',
@@ -10,6 +12,7 @@ const SCANNABLE_TYPES: NodeType[] = [
   'COMPONENT',
   'COMPONENT_SET',
   'INSTANCE',
+  'GROUP',
   'VECTOR',
   'ELLIPSE',
   'POLYGON',
@@ -221,6 +224,15 @@ export async function scanSelection(
       checked = true;
       const textViolation = checkTextNode(node as TextNode, tokens.textStyles, tokens.textByFingerprint);
       if (textViolation) violations.push(textViolation);
+    }
+
+    // Structural rules (auto-layout, naming) — only on nodes the designer owns
+    // here, i.e. not inherited inside a component instance.
+    if (!isInsideInstance(node)) {
+      checked = true;
+      violations.push(...checkNodeLayout(node));
+      const namingViolation = checkNodeNaming(node);
+      if (namingViolation) violations.push(namingViolation);
     }
 
     if (checked) scanned++;
