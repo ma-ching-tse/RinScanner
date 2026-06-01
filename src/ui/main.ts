@@ -18,10 +18,14 @@ interface State {
     loaded: boolean;
   };
   platformFilter: PlatformFilterValue;
-  tokenPanelOpen: boolean;
+  platformDivergence: boolean;
+  view: 'scan' | 'tokens';
   tokenFilter: string;
+  whitelist: string[];
+  whitelistOpen: boolean;
   selection: { count: number; rootName: string | null };
   scanScope: string | null;
+  scanSkipped: number;
   violations: Violation[];
   scanned: number;
   lastError?: string;
@@ -32,10 +36,14 @@ const state: State = {
   progress: { processed: 0, total: 0 },
   tokens: { colors: [], textStyles: [], dataSource: null, loaded: false },
   platformFilter: 'APP',
-  tokenPanelOpen: true,
+  platformDivergence: false,
+  view: 'scan',
   tokenFilter: '',
+  whitelist: [],
+  whitelistOpen: false,
   selection: { count: 0, rootName: null },
   scanScope: null,
+  scanSkipped: 0,
   violations: [],
   scanned: 0,
 };
@@ -131,31 +139,31 @@ function renderDataSource(ds: DataSourceInfo): string {
   </div>`;
 }
 
-function renderTokenPanel(): string {
-  const { colors, textStyles, dataSource, loaded } = state.tokens;
-  const open = state.tokenPanelOpen;
-  const filter = state.tokenFilter.trim().toLowerCase();
-  const header = `<div class="token-header">
-    <span data-action="toggle-tokens" style="cursor:pointer">${open ? '▼' : '▶'} </span>
-    <span class="token-header-title" data-action="toggle-tokens" style="cursor:pointer">已加载的 Token</span>
-    <span class="token-header-counts">${loaded ? `${colors.length} 颜色 · ${textStyles.length} 字体` : '加载中…'}</span>
+function tokenViewHeader(loaded: boolean, colorCount: number, textCount: number): string {
+  return `<div class="view-header">
+    <button class="icon-btn" data-action="back-to-scan" title="返回扫描">←</button>
+    <div class="view-title">Token 库</div>
+    <span class="token-header-counts">${loaded ? `${colorCount} 颜色 · ${textCount} 字体` : '加载中…'}</span>
     <button class="btn" data-action="reload-tokens" title="重新加载">↻</button>
   </div>`;
+}
 
-  if (!open) return `<div class="token-panel">${header}</div>`;
+function renderTokenView(): string {
+  const { colors, textStyles, dataSource, loaded } = state.tokens;
+  const filter = state.tokenFilter.trim().toLowerCase();
+  const header = tokenViewHeader(loaded, colors.length, textStyles.length);
 
   if (!loaded) {
-    return `<div class="token-panel">${header}<div class="empty">读取 Variables / Styles…</div></div>`;
+    return `${header}<div class="empty">读取 Variables / Styles…</div>`;
   }
 
   if (colors.length === 0 && textStyles.length === 0) {
-    return `<div class="token-panel">${header}
+    return `${header}
       ${dataSource ? renderDataSource(dataSource) : ''}
       <div class="empty">
         当前文件没读到任何颜色变量或字体样式。<br/>
         检查是否在 BMDS 文件里，或者已订阅 BMDS library（Assets → Libraries）。
-      </div>
-    </div>`;
+      </div>`;
   }
 
   const matchesFilter = (s: string) => filter === '' || s.toLowerCase().includes(filter);
@@ -221,19 +229,54 @@ function renderTokenPanel(): string {
       ? '<div class="empty">没有匹配的 token</div>'
       : '';
 
-  return `<div class="token-panel">
-    ${header}
-    ${dataSource ? renderDataSource(dataSource) : ''}
-    ${filterRow}
-    <div class="token-body">
+  return `${header}
+    <div class="view-fixed">
+      ${dataSource ? renderDataSource(dataSource) : ''}
+      ${filterRow}
+    </div>
+    <div class="view-scroll">
       ${empty}
       <div class="token-group">${colorHtml}</div>
       <div class="token-group">${textHtml}</div>
+    </div>`;
+}
+
+function renderWhitelistPanel(): string {
+  const open = state.whitelistOpen;
+  const count = state.whitelist.length;
+  const header = `<div class="token-header">
+    <span data-action="toggle-whitelist" style="cursor:pointer">${open ? '▼' : '▶'} </span>
+    <span class="token-header-title" data-action="toggle-whitelist" style="cursor:pointer">额外忽略的组件</span>
+    <span class="token-header-counts">${count} 个 · 库组件自动跳过</span>
+  </div>`;
+
+  if (!open) return `<div class="token-panel">${header}</div>`;
+
+  const chips =
+    count === 0
+      ? `<div class="wl-empty">来自设计系统库的组件已<b>自动跳过</b>，无需在此添加。这里用于额外忽略<b>本地组件</b>等特例：选中实例点下方按钮加入，该组件及其内部图层不会被扫描。</div>`
+      : `<div class="wl-chips">${state.whitelist
+          .map(
+            (name) =>
+              `<span class="wl-chip">${escape(name)}<button class="wl-remove" data-action="remove-whitelist" data-name="${escape(name)}" title="移除">×</button></span>`,
+          )
+          .join('')}</div>`;
+
+  return `<div class="token-panel">
+    ${header}
+    <div class="wl-body">
+      ${chips}
+      <button class="btn wl-add" data-action="add-whitelist">＋ 添加选中组件</button>
     </div>
   </div>`;
 }
 
 function render() {
+  if (state.view === 'tokens') {
+    root.innerHTML = renderTokenView();
+    return;
+  }
+
   const colorViolations = state.violations.filter((v) => v.kind !== 'text');
   const textViolations = state.violations.filter((v) => v.kind === 'text');
   const pct = state.progress.total > 0 ? Math.round((state.progress.processed / state.progress.total) * 100) : 0;
@@ -254,7 +297,7 @@ function render() {
           <span><strong>${state.violations.length}</strong> 处违规</span>
           <span><strong>${colorViolations.length}</strong> 颜色</span>
           <span><strong>${textViolations.length}</strong> 字体</span>
-          <span>扫描范围: ${escape(state.scanScope ?? '')} · ${state.scanned} 节点</span>
+          <span>扫描范围: ${escape(state.scanScope ?? '')} · ${state.scanned} 节点${state.scanSkipped > 0 ? ` · 已忽略 ${state.scanSkipped}` : ''}</span>
         </div>`
       : state.status === 'idle'
         ? `<div class="stats">${selectionHint}</div>`
@@ -282,12 +325,29 @@ function render() {
 
   const platformOptions: PlatformFilterValue[] = ['APP', 'Web', 'Both'];
   const platformLabels: Record<PlatformFilterValue, string> = { APP: 'APP', Web: 'Web', Both: '两者' };
-  const platformSwitcher = `<div class="seg">${platformOptions
-    .map(
-      (p) =>
-        `<button class="seg-btn ${state.platformFilter === p ? 'active' : ''}" data-action="set-platform" data-platform="${p}" ${state.platformFilter === p ? 'aria-current="true"' : ''}>${platformLabels[p]}</button>`,
-    )
-    .join('')}</div>`;
+  // Only show the platform switcher when at least one token actually diverges
+  // between APP and Web — otherwise it's a no-op and just adds clutter.
+  const platformRow = state.platformDivergence
+    ? `<div class="topbar-row">
+        <span class="muted" style="font-size:10px">匹配 token 来源:</span>
+        <div class="seg">${platformOptions
+          .map(
+            (p) =>
+              `<button class="seg-btn ${state.platformFilter === p ? 'active' : ''}" data-action="set-platform" data-platform="${p}" ${state.platformFilter === p ? 'aria-current="true"' : ''}>${platformLabels[p]}</button>`,
+          )
+          .join('')}</div>
+      </div>`
+    : '';
+
+  const tokensLoaded = state.tokens.loaded;
+  const tokenEntryLabel = tokensLoaded
+    ? `${state.tokens.colors.length} 颜色 · ${state.tokens.textStyles.length} 字体`
+    : '加载中…';
+  const tokenEntry = `<button class="token-entry" data-action="view-tokens">
+    <span class="token-entry-label">📋 Token 库</span>
+    <span class="token-entry-meta">${tokenEntryLabel}</span>
+    <span class="token-entry-chev">›</span>
+  </button>`;
 
   root.innerHTML = `
     <div class="topbar">
@@ -295,14 +355,12 @@ function render() {
         <div class="title">Token Scanner</div>
         <button class="scan-btn" data-action="scan" ${canScan ? '' : 'disabled'}>${scanning ? '扫描中…' : '扫描选中画板'}</button>
       </div>
-      <div class="topbar-row">
-        <span class="muted" style="font-size:10px">匹配 token 来源:</span>
-        ${platformSwitcher}
-      </div>
+      ${platformRow}
+      ${tokenEntry}
       ${stats}
       ${progressBar}
     </div>
-    ${renderTokenPanel()}
+    ${renderWhitelistPanel()}
     <div class="list">${listHtml}</div>
   `;
 }
@@ -336,8 +394,11 @@ root.addEventListener('click', (e) => {
     send({ type: 'selectNode', nodeId: btn.dataset.node! });
   } else if (action === 'apply') {
     send({ type: 'applyFix', violationId: btn.dataset.id!, tokenId: btn.dataset.token! });
-  } else if (action === 'toggle-tokens') {
-    state.tokenPanelOpen = !state.tokenPanelOpen;
+  } else if (action === 'view-tokens') {
+    state.view = 'tokens';
+    render();
+  } else if (action === 'back-to-scan') {
+    state.view = 'scan';
     render();
   } else if (action === 'reload-tokens') {
     e.stopPropagation();
@@ -352,6 +413,13 @@ root.addEventListener('click', (e) => {
       render();
       send({ type: 'setPlatformFilter', filter: platform });
     }
+  } else if (action === 'toggle-whitelist') {
+    state.whitelistOpen = !state.whitelistOpen;
+    render();
+  } else if (action === 'add-whitelist') {
+    send({ type: 'addSelectedToWhitelist' });
+  } else if (action === 'remove-whitelist') {
+    send({ type: 'removeFromWhitelist', name: btn.dataset.name! });
   }
 });
 
@@ -366,9 +434,13 @@ window.addEventListener('message', (e: MessageEvent) => {
       loaded: true,
     };
     state.platformFilter = msg.platformFilter;
+    state.platformDivergence = msg.platformDivergence;
     render();
   } else if (msg.type === 'selectionChanged') {
     state.selection = { count: msg.count, rootName: msg.rootName };
+    render();
+  } else if (msg.type === 'whitelistChanged') {
+    state.whitelist = msg.entries;
     render();
   } else if (msg.type === 'scanProgress') {
     state.progress = { processed: msg.processed, total: msg.total };
@@ -377,6 +449,7 @@ window.addEventListener('message', (e: MessageEvent) => {
     state.violations = msg.violations;
     state.scanned = msg.scanned;
     state.scanScope = msg.scope;
+    state.scanSkipped = msg.skipped;
     state.status = 'done';
     render();
   } else if (msg.type === 'fixApplied') {

@@ -1,15 +1,18 @@
 import { loadTokenIndex, toTextStyleSummary } from './scanner/loadTokens';
-import { scanSelection } from './scanner/walkNodes';
+import { resolveWhitelistName, scanSelection } from './scanner/walkNodes';
 import { applyFix } from './fixer/applyFix';
+import { hasPlatformDivergence } from './tokens/bmds';
 import { PlatformFilterValue, PluginMessage, UIMessage, Violation } from './types';
 import type { TokenIndex } from './scanner/loadTokens';
 
 figma.showUI(__html__, { width: 360, height: 680, themeColors: true });
 
 const PLATFORM_FILTER_KEY = 'bmds-platform-filter';
+const WHITELIST_KEY = 'bmds-component-whitelist';
 const violationsById = new Map<string, Violation>();
 let currentTokens: TokenIndex | null = null;
 let platformFilter: PlatformFilterValue = 'APP';
+let whitelist: string[] = [];
 
 function isValidFilter(v: unknown): v is PlatformFilterValue {
   return v === 'APP' || v === 'Web' || v === 'Both';
@@ -17,6 +20,41 @@ function isValidFilter(v: unknown): v is PlatformFilterValue {
 
 function post(msg: PluginMessage) {
   figma.ui.postMessage(msg);
+}
+
+async function saveWhitelist() {
+  await figma.clientStorage.setAsync(WHITELIST_KEY, whitelist);
+  post({ type: 'whitelistChanged', entries: whitelist });
+}
+
+async function addSelectedToWhitelist() {
+  const selection = figma.currentPage.selection;
+  if (selection.length === 0) {
+    figma.notify('请先选中要忽略的组件实例', { error: true });
+    return;
+  }
+  const added: string[] = [];
+  let invalid = 0;
+  for (const node of selection) {
+    const name = await resolveWhitelistName(node);
+    if (!name) {
+      invalid++;
+      continue;
+    }
+    if (!whitelist.some((w) => w.toLowerCase() === name.toLowerCase())) {
+      whitelist.push(name);
+      added.push(name);
+    }
+  }
+  if (added.length > 0) {
+    whitelist.sort((a, b) => a.localeCompare(b));
+    await saveWhitelist();
+    figma.notify(`已忽略组件: ${added.join('、')}`);
+  } else if (invalid === selection.length) {
+    figma.notify('选中的不是组件实例 / 组件，无法加入白名单', { error: true });
+  } else {
+    figma.notify('选中的组件已在白名单中');
+  }
 }
 
 async function loadAndPostTokens(): Promise<TokenIndex> {
@@ -28,6 +66,7 @@ async function loadAndPostTokens(): Promise<TokenIndex> {
     textStyles: tokens.textStyles.map(toTextStyleSummary),
     dataSource: tokens.dataSource,
     platformFilter,
+    platformDivergence: hasPlatformDivergence(),
   });
   return tokens;
 }
@@ -52,11 +91,11 @@ async function runScan() {
   const selection = figma.currentPage.selection;
   if (selection.length === 0) {
     figma.notify('Token Scanner: 请先选中要扫描的画板 / 节点', { error: true });
-    post({ type: 'scanResult', violations: [], scanned: 0, scope: '无选中' });
+    post({ type: 'scanResult', violations: [], scanned: 0, scope: '无选中', skipped: 0 });
     return;
   }
   const tokens = currentTokens ?? (await loadAndPostTokens());
-  const result = await scanSelection(selection, tokens, (processed, total) => {
+  const result = await scanSelection(selection, tokens, whitelist, (processed, total) => {
     post({ type: 'scanProgress', processed, total });
   });
   for (const v of result.violations) violationsById.set(v.id, v);
@@ -65,6 +104,7 @@ async function runScan() {
     violations: result.violations,
     scanned: result.scanned,
     scope: describeSelection(selection),
+    skipped: result.skipped,
   });
 }
 
@@ -78,6 +118,15 @@ async function bootstrap() {
   } catch {
     // ignore — use default
   }
+  try {
+    const storedWl = await figma.clientStorage.getAsync(WHITELIST_KEY);
+    if (Array.isArray(storedWl)) {
+      whitelist = storedWl.filter((x): x is string => typeof x === 'string');
+    }
+  } catch {
+    // ignore — use default
+  }
+  post({ type: 'whitelistChanged', entries: whitelist });
   await loadAndPostTokens();
 }
 
@@ -96,6 +145,11 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       platformFilter = msg.filter;
       await figma.clientStorage.setAsync(PLATFORM_FILTER_KEY, msg.filter);
       await loadAndPostTokens();
+    } else if (msg.type === 'addSelectedToWhitelist') {
+      await addSelectedToWhitelist();
+    } else if (msg.type === 'removeFromWhitelist') {
+      whitelist = whitelist.filter((w) => w !== msg.name);
+      await saveWhitelist();
     } else if (msg.type === 'selectNode') {
       const node = await figma.getNodeByIdAsync(msg.nodeId);
       if (node && 'type' in node && node.type !== 'PAGE' && node.type !== 'DOCUMENT') {

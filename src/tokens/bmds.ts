@@ -71,6 +71,11 @@ export function filterColorsByPlatform(filter: PlatformFilter): BmdsColorToken[]
   return BMDS_COLORS.filter((t) => tokenAppliesTo(t, filter));
 }
 
+/** True when at least one token is platform-specific (APP/Web diverge). */
+export function hasPlatformDivergence(): boolean {
+  return BMDS_COLORS.some((t) => !!t.platforms && t.platforms.length > 0);
+}
+
 export function platformBadge(t: BmdsColorToken): string {
   if (!t.platforms || t.platforms.length === 2) return 'APP + Web';
   return t.platforms.join(' + ');

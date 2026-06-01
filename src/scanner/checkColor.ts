@@ -92,11 +92,15 @@ export function checkNodeColors(
   node: SceneNode,
   tokens: ColorToken[],
   byKey: Map<string, ColorToken>,
+  allowFills = true,
+  allowStrokes = true,
 ): Violation[] {
   const violations: Violation[] = [];
   const targets = getColorTargets(node);
 
   for (const target of targets) {
+    if (target.field === 'fills' && !allowFills) continue;
+    if (target.field === 'strokes' && !allowStrokes) continue;
     if (target.boundStyleId && target.boundStyleId !== '' && target.boundStyleId !== figma.mixed) {
       continue;
     }

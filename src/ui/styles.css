@@ -97,3 +97,26 @@ html, body { margin: 0; padding: 0; font: 11px/1.4 -apple-system, BlinkMacSystem
 .seg-btn.active { background: var(--brand); color: var(--brand-text); }
 
 .platform-chip { display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 3px; font-size: 9px; font-weight: 600; background: var(--bg-secondary); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+
+.wl-body { padding: 8px 12px; }
+.wl-empty { color: var(--text-secondary); font-size: 10px; line-height: 1.5; margin-bottom: 8px; }
+.wl-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.wl-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 8px; border-radius: 12px; background: var(--bg-secondary); border: 1px solid var(--border); font-size: 11px; }
+.wl-remove { border: none; background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 13px; line-height: 1; padding: 0 2px; border-radius: 8px; }
+.wl-remove:hover { color: var(--text); background: var(--border); }
+.wl-add { width: 100%; padding: 6px; }
+
+/* Token-library entry button on the scan view */
+.token-entry { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; color: var(--text); font-size: 11px; text-align: left; }
+.token-entry:hover { border-color: var(--brand); }
+.token-entry-label { font-weight: 600; }
+.token-entry-meta { flex: 1; color: var(--text-secondary); }
+.token-entry-chev { color: var(--text-secondary); font-size: 15px; line-height: 1; }
+
+/* Secondary view (Token 库) chrome */
+.view-header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); background: var(--bg-secondary); flex-shrink: 0; }
+.view-title { font-weight: 600; font-size: 12px; flex: 1; }
+.icon-btn { border: none; background: transparent; color: var(--text); cursor: pointer; font-size: 16px; line-height: 1; padding: 2px 8px; border-radius: 4px; }
+.icon-btn:hover { background: var(--border); }
+.view-fixed { flex-shrink: 0; }
+.view-scroll { flex: 1; overflow-y: auto; }

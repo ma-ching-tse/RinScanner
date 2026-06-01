@@ -88,6 +88,8 @@ export type UIMessage =
   | { type: 'scan' }
   | { type: 'reloadTokens' }
   | { type: 'setPlatformFilter'; filter: PlatformFilterValue }
+  | { type: 'addSelectedToWhitelist' }
+  | { type: 'removeFromWhitelist'; name: string }
   | { type: 'selectNode'; nodeId: string }
   | { type: 'applyFix'; violationId: string; tokenId: string };
 
@@ -107,8 +109,10 @@ export type PluginMessage =
       textStyles: TextStyleSummary[];
       dataSource: DataSourceInfo;
       platformFilter: PlatformFilterValue;
+      platformDivergence: boolean;
     }
   | { type: 'selectionChanged'; count: number; rootName: string | null }
+  | { type: 'whitelistChanged'; entries: string[] }
   | { type: 'scanProgress'; processed: number; total: number }
-  | { type: 'scanResult'; violations: Violation[]; scanned: number; scope: string }
+  | { type: 'scanResult'; violations: Violation[]; scanned: number; scope: string; skipped: number }
   | { type: 'fixApplied'; violationId: string; ok: boolean; error?: string };

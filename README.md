@@ -44,9 +44,19 @@ src/ui/                # iframe 面板
 scripts/build-html.js  # 把 ui.js + styles.css 内联进 ui.html
 ```
 
+## 组件实例的处理
+
+按「值在哪里被创作，就在哪里检测」的原则分三种：
+
+- **设计系统库组件 → 整体跳过**：实例的主组件来自外部库（`mainComponent.remote === true`）时，连同内部所有图层一起跳过，包括手动 override —— 因为这些组件在库文件里画的时候已经 token 化，是库的职责。无需维护任何名单，库里加新组件自动覆盖。
+- **本地组件实例 → 只检测 override**：主组件是当前文件本地画的（`remote === false`）时，继承值不标（本地主组件本身会被单独扫到），只检测设计师手动覆盖过的属性。判定依据 `InstanceNode.overrides`。
+- **额外白名单（可选）**：「额外忽略的组件」面板可手动按组件名忽略本地组件等特例，存在 `figma.clientStorage`（本机本账号，跨文件通用）。
+
+> 前提：订阅的库都是自己 token 化过的 DS 库；若引入未 token 化的第三方 UI kit，其组件也会被一并跳过。
+
 ## 已知限制
 
-- 不下钻到 component instance 内部子节点（按设计：只检测 instance override）
+- 嵌套实例的 override 判定以顶层 `overrides` 为准，深层嵌套可能漏判（偏向少报，不会误报）
 - 不检测 spacing / radius / effect
 - 混合字体 (`figma.mixed`) 仅标记为「需要人工处理」，不推荐自动修复
-- 只读 Local Variables / Styles；订阅自外部 library 的 token 需在文件中已可用才会被识别
+- 颜色 token 来自 `src/tokens/bmds.ts`（写死）；字体仍读当前文件的 Local Text Styles
