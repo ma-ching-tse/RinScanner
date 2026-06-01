@@ -105,10 +105,17 @@ export interface Violation {
 
 export type PlatformFilterValue = 'APP' | 'Web' | 'Both';
 
+export interface ScanCategorySelection {
+  token: boolean;
+  autolayout: boolean;
+  naming: boolean;
+}
+
 export type UIMessage =
   | { type: 'scan' }
   | { type: 'reloadTokens' }
   | { type: 'setPlatformFilter'; filter: PlatformFilterValue }
+  | { type: 'setScanCategories'; categories: ScanCategorySelection }
   | { type: 'addSelectedToWhitelist' }
   | { type: 'removeFromWhitelist'; name: string }
   | { type: 'selectNode'; nodeId: string }
@@ -135,6 +142,7 @@ export type PluginMessage =
     }
   | { type: 'selectionChanged'; count: number; rootName: string | null }
   | { type: 'whitelistChanged'; entries: string[] }
+  | { type: 'scanCategoriesChanged'; categories: ScanCategorySelection }
   | { type: 'scanProgress'; processed: number; total: number }
   | { type: 'scanResult'; violations: Violation[]; scanned: number; scope: string; skipped: number }
   | { type: 'fixApplied'; violationId: string; ok: boolean; error?: string };

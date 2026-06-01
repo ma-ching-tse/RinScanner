@@ -3,6 +3,7 @@ import {
   DataSourceInfo,
   PlatformFilterValue,
   PluginMessage,
+  ScanCategorySelection,
   TextStyleSummary,
   UIMessage,
   Violation,
@@ -19,6 +20,7 @@ interface State {
   };
   platformFilter: PlatformFilterValue;
   platformDivergence: boolean;
+  scanCategories: ScanCategorySelection;
   view: 'scan' | 'tokens';
   tokenFilter: string;
   whitelist: string[];
@@ -37,6 +39,7 @@ const state: State = {
   tokens: { colors: [], textStyles: [], dataSource: null, loaded: false },
   platformFilter: 'APP',
   platformDivergence: false,
+  scanCategories: { token: true, autolayout: true, naming: true },
   view: 'scan',
   tokenFilter: '',
   whitelist: [],
@@ -380,12 +383,28 @@ function render() {
     <span class="token-entry-chev">›</span>
   </button>`;
 
+  const catDefs: { key: keyof ScanCategorySelection; label: string }[] = [
+    { key: 'token', label: 'Token' },
+    { key: 'autolayout', label: '布局' },
+    { key: 'naming', label: '命名' },
+  ];
+  const categoryRow = `<div class="topbar-row">
+    <span class="muted" style="font-size:10px">扫描:</span>
+    <div class="cat-toggles">${catDefs
+      .map(
+        (c) =>
+          `<button class="cat-chip ${state.scanCategories[c.key] ? 'on' : ''}" data-action="toggle-category" data-cat="${c.key}">${state.scanCategories[c.key] ? '✓ ' : ''}${c.label}</button>`,
+      )
+      .join('')}</div>
+  </div>`;
+
   root.innerHTML = `
     <div class="topbar">
       <div class="topbar-row">
         <div class="title">Token Scanner</div>
         <button class="scan-btn" data-action="scan" ${canScan ? '' : 'disabled'}>${scanning ? '扫描中…' : '扫描选中画板'}</button>
       </div>
+      ${categoryRow}
       ${platformRow}
       ${tokenEntry}
       ${stats}
@@ -427,6 +446,15 @@ root.addEventListener('click', (e) => {
     send({ type: 'applyFix', violationId: btn.dataset.id!, tokenId: btn.dataset.token! });
   } else if (action === 'apply-layout') {
     send({ type: 'applyLayoutFix', violationId: btn.dataset.id! });
+  } else if (action === 'toggle-category') {
+    const cat = btn.dataset.cat as keyof ScanCategorySelection;
+    const next = { ...state.scanCategories, [cat]: !state.scanCategories[cat] };
+    // Keep at least one category on.
+    if (next.token || next.autolayout || next.naming) {
+      state.scanCategories = next;
+      render();
+      send({ type: 'setScanCategories', categories: next });
+    }
   } else if (action === 'view-tokens') {
     state.view = 'tokens';
     render();
@@ -474,6 +502,9 @@ window.addEventListener('message', (e: MessageEvent) => {
     render();
   } else if (msg.type === 'whitelistChanged') {
     state.whitelist = msg.entries;
+    render();
+  } else if (msg.type === 'scanCategoriesChanged') {
+    state.scanCategories = msg.categories;
     render();
   } else if (msg.type === 'scanProgress') {
     state.progress = { processed: msg.processed, total: msg.total };

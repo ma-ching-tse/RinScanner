@@ -1,4 +1,4 @@
-import { Violation } from '../types';
+import { ScanCategorySelection, Violation } from '../types';
 import { TokenIndex } from './loadTokens';
 import { checkNodeColors } from './checkColor';
 import { checkTextNode } from './checkText';
@@ -161,6 +161,7 @@ export async function scanSelection(
   roots: readonly SceneNode[],
   tokens: TokenIndex,
   whitelist: readonly string[] = [],
+  categories: ScanCategorySelection = { token: true, autolayout: true, naming: true },
   onProgress?: (processed: number, total: number) => void,
 ): Promise<ScanResult> {
   await figma.currentPage.loadAsync();
@@ -208,7 +209,7 @@ export async function scanSelection(
     const gate = computeGate(node, overrideMap);
     let checked = false;
 
-    if (gate.fills || gate.strokes) {
+    if (categories.token && (gate.fills || gate.strokes)) {
       checked = true;
       const colorViolations = checkNodeColors(
         node,
@@ -220,7 +221,7 @@ export async function scanSelection(
       violations.push(...colorViolations);
     }
 
-    if (node.type === 'TEXT' && gate.text) {
+    if (categories.token && node.type === 'TEXT' && gate.text) {
       checked = true;
       const textViolation = checkTextNode(node as TextNode, tokens.textStyles, tokens.textByFingerprint);
       if (textViolation) violations.push(textViolation);
@@ -228,11 +229,15 @@ export async function scanSelection(
 
     // Structural rules (auto-layout, naming) — only on nodes the designer owns
     // here, i.e. not inherited inside a component instance.
-    if (!isInsideInstance(node)) {
+    if ((categories.autolayout || categories.naming) && !isInsideInstance(node)) {
       checked = true;
-      violations.push(...checkNodeLayout(node));
-      const namingViolation = checkNodeNaming(node);
-      if (namingViolation) violations.push(namingViolation);
+      if (categories.autolayout) {
+        violations.push(...checkNodeLayout(node));
+      }
+      if (categories.naming) {
+        const namingViolation = checkNodeNaming(node);
+        if (namingViolation) violations.push(namingViolation);
+      }
     }
 
     if (checked) scanned++;

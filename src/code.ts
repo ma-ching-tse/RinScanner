@@ -3,20 +3,35 @@ import { resolveWhitelistName, scanSelection } from './scanner/walkNodes';
 import { applyFix } from './fixer/applyFix';
 import { applyLayoutFix } from './fixer/applyLayoutFix';
 import { hasPlatformDivergence } from './tokens/bmds';
-import { PlatformFilterValue, PluginMessage, UIMessage, Violation } from './types';
+import { PlatformFilterValue, PluginMessage, ScanCategorySelection, UIMessage, Violation } from './types';
 import type { TokenIndex } from './scanner/loadTokens';
 
 figma.showUI(__html__, { width: 360, height: 680, themeColors: true });
 
 const PLATFORM_FILTER_KEY = 'bmds-platform-filter';
 const WHITELIST_KEY = 'bmds-component-whitelist';
+const SCAN_CATEGORIES_KEY = 'bmds-scan-categories';
 const violationsById = new Map<string, Violation>();
 let currentTokens: TokenIndex | null = null;
 let platformFilter: PlatformFilterValue = 'APP';
 let whitelist: string[] = [];
+let scanCategories: ScanCategorySelection = { token: true, autolayout: true, naming: true };
 
 function isValidFilter(v: unknown): v is PlatformFilterValue {
   return v === 'APP' || v === 'Web' || v === 'Both';
+}
+
+function normalizeCategories(v: unknown): ScanCategorySelection | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  const cats = {
+    token: o.token !== false,
+    autolayout: o.autolayout !== false,
+    naming: o.naming !== false,
+  };
+  // At least one must be on.
+  if (!cats.token && !cats.autolayout && !cats.naming) cats.token = true;
+  return cats;
 }
 
 function post(msg: PluginMessage) {
@@ -96,7 +111,7 @@ async function runScan() {
     return;
   }
   const tokens = currentTokens ?? (await loadAndPostTokens());
-  const result = await scanSelection(selection, tokens, whitelist, (processed, total) => {
+  const result = await scanSelection(selection, tokens, whitelist, scanCategories, (processed, total) => {
     post({ type: 'scanProgress', processed, total });
   });
   for (const v of result.violations) violationsById.set(v.id, v);
@@ -127,7 +142,14 @@ async function bootstrap() {
   } catch {
     // ignore — use default
   }
+  try {
+    const storedCats = normalizeCategories(await figma.clientStorage.getAsync(SCAN_CATEGORIES_KEY));
+    if (storedCats) scanCategories = storedCats;
+  } catch {
+    // ignore — use default
+  }
   post({ type: 'whitelistChanged', entries: whitelist });
+  post({ type: 'scanCategoriesChanged', categories: scanCategories });
   await loadAndPostTokens();
 }
 
@@ -146,6 +168,13 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       platformFilter = msg.filter;
       await figma.clientStorage.setAsync(PLATFORM_FILTER_KEY, msg.filter);
       await loadAndPostTokens();
+    } else if (msg.type === 'setScanCategories') {
+      const cats = normalizeCategories(msg.categories);
+      if (cats) {
+        scanCategories = cats;
+        await figma.clientStorage.setAsync(SCAN_CATEGORIES_KEY, cats);
+        post({ type: 'scanCategoriesChanged', categories: cats });
+      }
     } else if (msg.type === 'addSelectedToWhitelist') {
       await addSelectedToWhitelist();
     } else if (msg.type === 'removeFromWhitelist') {
