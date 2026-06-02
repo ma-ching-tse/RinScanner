@@ -4,7 +4,6 @@ import { checkNodeColors } from './checkColor';
 import { checkTextNode } from './checkText';
 import { checkNodeLayout } from './checkLayout';
 import { checkNodeNaming } from './checkNaming';
-import { getAvailableColorVariableNames } from '../fixer/variableBind';
 
 const SCANNABLE_TYPES: NodeType[] = [
   'TEXT',
@@ -199,10 +198,6 @@ export async function scanSelection(
   // component values and only flag local overrides.
   const overrideMap = buildOverrideMap(collected);
 
-  // Color-variable names available to bind in this file. Empty set => no BMDS
-  // variable library here, so value-correct-but-unbound colors aren't flagged.
-  const bindableNames = categories.token ? await getAvailableColorVariableNames() : new Set<string>();
-
   const violations: Violation[] = [];
   let scanned = 0;
   const total = collected.length;
@@ -222,7 +217,6 @@ export async function scanSelection(
         tokens.colorByHex,
         gate.fills,
         gate.strokes,
-        bindableNames,
       );
       violations.push(...colorViolations);
     }
