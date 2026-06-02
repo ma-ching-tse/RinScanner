@@ -454,7 +454,7 @@ function render() {
   root.innerHTML = `
     <div class="topbar">
       <div class="topbar-row">
-        <div class="title">Token Scanner</div>
+        <div class="title">RinScanner</div>
         <button class="icon-btn" data-action="open-settings" title="LLM 命名设置">⚙</button>
         <button class="scan-btn" data-action="scan" ${canScan ? '' : 'disabled'}>${scanning ? '扫描中…' : '扫描选中画板'}</button>
       </div>

@@ -1,5 +1,5 @@
 {
-  "name": "bitmart-token-scanner",
+  "name": "rinscanner",
   "version": "0.1.0",
   "description": "Figma plugin that scans the current page for color and typography values not bound to design tokens.",
   "private": true,

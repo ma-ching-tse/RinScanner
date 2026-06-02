@@ -1,6 +1,6 @@
 {
-  "name": "Token Scanner",
-  "id": "bitmart-token-scanner",
+  "name": "RinScanner",
+  "id": "rinscanner",
   "api": "1.0.0",
   "main": "dist/code.js",
   "ui": "dist/ui.html",

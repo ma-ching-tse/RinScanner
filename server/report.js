@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Token Scanner 使用统计 — 命令行文本报表（零依赖）。
+// RinScanner 使用统计 — 命令行文本报表（零依赖）。
 //
 //   node server/report.js                # 全部历史
 //   node server/report.js --days 7       # 最近 7 天
@@ -176,7 +176,7 @@ else if (opts.days) scope = `最近 ${opts.days} 天`;
 if (opts.user) scope += ` · 用户「${opts.user}」`;
 
 out.push('');
-out.push(`Token Scanner 使用统计   ·   ${scope}`);
+out.push(`RinScanner 使用统计   ·   ${scope}`);
 if (data.period.firstSeen) out.push(`数据范围: ${fmt(data.period.firstSeen)} ~ ${fmt(data.period.lastSeen)}`);
 out.push(line('═'));
 

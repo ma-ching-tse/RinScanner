@@ -1,4 +1,4 @@
-# Token Scanner — Figma Plugin
+# RinScanner — Figma Plugin
 
 扫描当前 Figma 页面，找出未绑定到 Variables / Paint Styles / Text Styles 的颜色和字体值，并提供一键替换建议。
 

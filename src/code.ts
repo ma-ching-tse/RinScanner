@@ -192,7 +192,7 @@ async function runScan() {
   violationsById.clear();
   const selection = figma.currentPage.selection;
   if (selection.length === 0) {
-    figma.notify('Token Scanner: 请先选中要扫描的画板 / 节点', { error: true });
+    figma.notify('RinScanner: 请先选中要扫描的画板 / 节点', { error: true });
     post({ type: 'scanResult', violations: [], scanned: 0, scope: '无选中', skipped: 0 });
     return;
   }
@@ -284,7 +284,7 @@ async function bootstrap() {
 }
 
 bootstrap().catch((err) => {
-  figma.notify(`Token Scanner: 加载 token 失败 — ${err instanceof Error ? err.message : String(err)}`, { error: true });
+  figma.notify(`RinScanner: 加载 token 失败 — ${err instanceof Error ? err.message : String(err)}`, { error: true });
 });
 
 figma.ui.onmessage = async (msg: UIMessage) => {
@@ -391,6 +391,6 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       }
     }
   } catch (err) {
-    figma.notify(`Token Scanner: ${err instanceof Error ? err.message : String(err)}`, { error: true });
+    figma.notify(`RinScanner: ${err instanceof Error ? err.message : String(err)}`, { error: true });
   }
 };

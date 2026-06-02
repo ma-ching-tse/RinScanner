@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Token Scanner telemetry — INGEST server (zero dependencies, pure Node stdlib).
+// RinScanner telemetry — INGEST server (zero dependencies, pure Node stdlib).
 //
 // This only collects events. To VIEW the data, run the CLI report:
 //   node server/report.js            (see report.js / README.md)
@@ -65,7 +65,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Token Scanner telemetry ingest`);
+  console.log(`RinScanner telemetry ingest`);
   console.log(`  POST http://localhost:${PORT}/telemetry`);
   console.log(`  data: ${DATA_FILE}`);
   console.log(`  view: node server/report.js`);

@@ -110,7 +110,7 @@ export async function loadSubscribedLibraryCollections(): Promise<LibraryCollect
     const collections = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
     return collections.map((c) => ({ key: c.key, name: c.name, libraryName: c.libraryName }));
   } catch (err) {
-    console.warn('Token Scanner: 无法读取 team library variables', err);
+    console.warn('RinScanner: 无法读取 team library variables', err);
     return [];
   }
 }
