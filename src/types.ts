@@ -60,7 +60,25 @@ export interface TextStyleToken {
   fingerprint: string;
 }
 
-export type ViolationKind = 'color-fill' | 'color-stroke' | 'text';
+export type IssueCategory = 'token' | 'autolayout' | 'naming';
+
+export type ViolationKind =
+  | 'color-fill'
+  | 'color-stroke'
+  | 'text'
+  | 'autolayout-group'
+  | 'autolayout-none'
+  | 'naming-default';
+
+export type FixKind = 'apply-token' | 'add-autolayout' | 'convert-group' | 'rename';
+
+export interface FixInfo {
+  kind: FixKind;
+  /** Beta = best-effort, may rearrange / not be perfect; user should eyeball + undo. */
+  beta?: boolean;
+  /** Proposed new name for a rename fix. */
+  rename?: string;
+}
 
 export interface Suggestion {
   tokenId: string;
@@ -73,25 +91,52 @@ export interface Violation {
   id: string;
   nodeId: string;
   nodeName: string;
+  category: IssueCategory;
   kind: ViolationKind;
   currentValue: string;
+  message?: string;
   paintIndex?: number;
   colorHex?: string;
   colorAlpha?: number;
   suggestion?: Suggestion;
   candidates?: Suggestion[];
+  fix?: FixInfo;
 }
 
 export type PlatformFilterValue = 'APP' | 'Web' | 'Both';
+
+export interface ScanCategorySelection {
+  token: boolean;
+  autolayout: boolean;
+  naming: boolean;
+}
 
 export type UIMessage =
   | { type: 'scan' }
   | { type: 'reloadTokens' }
   | { type: 'setPlatformFilter'; filter: PlatformFilterValue }
+  | { type: 'setScanCategories'; categories: ScanCategorySelection }
   | { type: 'addSelectedToWhitelist' }
   | { type: 'removeFromWhitelist'; name: string }
   | { type: 'selectNode'; nodeId: string }
-  | { type: 'applyFix'; violationId: string; tokenId: string };
+  | { type: 'applyFix'; violationId: string; tokenId: string }
+  | { type: 'applyLayoutFix'; violationId: string }
+  | { type: 'requestNamingSuggestions' }
+  | { type: 'applyRename'; violationId: string; name: string }
+  | { type: 'setLlmConfig'; baseUrl: string; apiKey: string; model: string };
+
+export interface LlmConfigPublic {
+  configured: boolean;
+  baseUrl: string;
+  model: string;
+  hasKey: boolean;
+}
+
+export interface NamingSuggestionResult {
+  violationId: string;
+  name?: string;
+  error?: string;
+}
 
 export interface TextStyleSummary {
   id: string;
@@ -113,6 +158,10 @@ export type PluginMessage =
     }
   | { type: 'selectionChanged'; count: number; rootName: string | null }
   | { type: 'whitelistChanged'; entries: string[] }
+  | { type: 'scanCategoriesChanged'; categories: ScanCategorySelection }
   | { type: 'scanProgress'; processed: number; total: number }
   | { type: 'scanResult'; violations: Violation[]; scanned: number; scope: string; skipped: number }
-  | { type: 'fixApplied'; violationId: string; ok: boolean; error?: string };
+  | { type: 'fixApplied'; violationId: string; ok: boolean; error?: string }
+  | { type: 'llmConfig'; config: LlmConfigPublic }
+  | { type: 'namingSuggestionsStart'; violationIds: string[] }
+  | { type: 'namingSuggestions'; results: NamingSuggestionResult[] };

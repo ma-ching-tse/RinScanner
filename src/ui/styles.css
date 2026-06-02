@@ -120,3 +120,26 @@ html, body { margin: 0; padding: 0; font: 11px/1.4 -apple-system, BlinkMacSystem
 .icon-btn:hover { background: var(--border); }
 .view-fixed { flex-shrink: 0; }
 .view-scroll { flex: 1; overflow-y: auto; }
+
+/* Structural (layout / naming) issue cards */
+.swatch.struct-ic { display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--text-secondary); background: var(--bg-secondary); }
+.beta-tag { display: inline-block; margin-left: 5px; padding: 0 4px; border-radius: 3px; font-size: 8px; font-weight: 700; background: rgba(240, 160, 32, 0.2); color: var(--warning); text-transform: uppercase; letter-spacing: 0.04em; vertical-align: middle; }
+
+/* Scan-category toggle chips */
+.cat-toggles { display: inline-flex; gap: 6px; }
+.cat-chip { padding: 3px 10px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text-secondary); font-size: 11px; cursor: pointer; }
+.cat-chip:hover { border-color: var(--brand); }
+.cat-chip.on { background: var(--brand); color: var(--brand-text); border-color: var(--brand); }
+
+/* AI-suggest link button in the naming group header */
+.link-btn { float: right; border: none; background: transparent; color: var(--brand); cursor: pointer; font-size: 10px; font-weight: 600; padding: 0; text-transform: none; letter-spacing: 0; }
+.link-btn:hover { text-decoration: underline; }
+
+/* LLM settings view */
+.settings-body { padding: 12px; }
+.field-label { display: block; font-size: 11px; color: var(--text-secondary); margin: 10px 0 4px; }
+.field-input { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); font-size: 11px; outline: none; }
+.field-input:focus { border-color: var(--brand); }
+.settings-save { width: 100%; padding: 7px; margin: 14px 0 10px; }
+.adv-config { margin-top: 10px; }
+.adv-config summary { font-size: 11px; color: var(--text-secondary); cursor: pointer; }

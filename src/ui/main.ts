@@ -1,8 +1,10 @@
 import {
   ColorVariableSummary,
   DataSourceInfo,
+  LlmConfigPublic,
   PlatformFilterValue,
   PluginMessage,
+  ScanCategorySelection,
   TextStyleSummary,
   UIMessage,
   Violation,
@@ -19,8 +21,11 @@ interface State {
   };
   platformFilter: PlatformFilterValue;
   platformDivergence: boolean;
-  view: 'scan' | 'tokens';
+  scanCategories: ScanCategorySelection;
+  view: 'scan' | 'tokens' | 'settings';
   tokenFilter: string;
+  llmConfig: LlmConfigPublic;
+  namingSuggestions: Record<string, { name?: string; error?: string; loading?: boolean }>;
   whitelist: string[];
   whitelistOpen: boolean;
   selection: { count: number; rootName: string | null };
@@ -37,8 +42,11 @@ const state: State = {
   tokens: { colors: [], textStyles: [], dataSource: null, loaded: false },
   platformFilter: 'APP',
   platformDivergence: false,
+  scanCategories: { token: true, autolayout: true, naming: true },
   view: 'scan',
   tokenFilter: '',
+  llmConfig: { configured: false, baseUrl: '', model: '', hasKey: false },
+  namingSuggestions: {},
   whitelist: [],
   whitelistOpen: false,
   selection: { count: 0, rootName: null },
@@ -90,6 +98,11 @@ function renderSuggestion(v: Violation): string {
 }
 
 function renderCard(v: Violation): string {
+  if (v.category === 'token') return renderTokenCard(v);
+  return renderStructuralCard(v);
+}
+
+function renderTokenCard(v: Violation): string {
   const isColor = v.kind !== 'text';
   const swatch = isColor
     ? swatchHtml(v.colorHex ?? '#000000', v.colorAlpha ?? 1, v.currentValue, '')
@@ -109,6 +122,42 @@ function renderCard(v: Violation): string {
       <div class="actions">
         <button class="btn" data-action="locate" data-node="${v.nodeId}">定位</button>
         ${applyBtn}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderStructuralCard(v: Violation): string {
+  const isLayout = v.category === 'autolayout';
+  const icon = isLayout ? '▦' : '⌶';
+  const kindLabel =
+    v.kind === 'autolayout-group' ? 'Group' : v.kind === 'autolayout-none' ? '无 auto-layout' : '默认命名';
+
+  // auto-layout auto-fix is shelved (results were unreliable) — detection + locate only.
+  // naming gets an AI suggestion + rename action.
+  let extraBtn = '';
+  let suggestionRow = '';
+  if (v.category === 'naming') {
+    const sug = state.namingSuggestions[v.id];
+    if (sug && sug.name) {
+      suggestionRow = `<div class="suggestion exact">建议: ${escape(sug.name)}</div>`;
+      extraBtn = `<button class="btn primary" data-action="apply-rename" data-id="${v.id}" data-name="${escape(sug.name)}">改名</button>`;
+    } else if (sug && sug.error) {
+      suggestionRow = `<div class="no-match">AI 建议失败: ${escape(sug.error)}</div>`;
+    } else if (sug && sug.loading) {
+      suggestionRow = `<div class="no-match">AI 生成中…</div>`;
+    }
+  }
+
+  return `<div class="card" data-violation="${v.id}">
+    <div class="swatch struct-ic">${icon}</div>
+    <div class="card-body">
+      <div class="card-title">${escape(v.nodeName)} <span style="color:var(--text-secondary);font-weight:400">· ${kindLabel}</span></div>
+      <div class="card-meta">${escape(v.message ?? v.currentValue)}</div>
+      ${suggestionRow}
+      <div class="actions">
+        <button class="btn" data-action="locate" data-node="${v.nodeId}">定位</button>
+        ${extraBtn}
       </div>
     </div>
   </div>`;
@@ -271,14 +320,50 @@ function renderWhitelistPanel(): string {
   </div>`;
 }
 
+function renderSettingsView(): string {
+  const c = state.llmConfig;
+  const status = c.configured
+    ? `<span class="src-badge library">已配置</span>`
+    : `<span class="src-badge style">未配置</span>`;
+  return `<div class="view-header">
+      <button class="icon-btn" data-action="back-to-scan" title="返回">←</button>
+      <div class="view-title">LLM 命名设置 ${status}</div>
+    </div>
+    <div class="view-scroll settings-body">
+      <div class="ds-note" style="margin-bottom:10px">
+        地址和模型已是团队默认值，<strong>你只需粘贴自己的 API Key</strong> 即可（地址/模型留默认就行）。
+      </div>
+      <label class="field-label">API Key${c.hasKey ? '（已保存，留空则不修改）' : '（百炼 sk- 开头）'}</label>
+      <input class="field-input" id="llm-key" type="password" placeholder="${c.hasKey ? '••••••••（已保存）' : 'sk-...'}" />
+      <details class="adv-config">
+        <summary>高级：接口地址 / 模型（换 Qwen 模型只改下面「模型」，地址不用动）</summary>
+        <label class="field-label">接口地址 (Base URL) · 阿里云百炼固定为下方默认值</label>
+        <input class="field-input" id="llm-base" value="${escape(c.baseUrl)}" placeholder="${escape('https://dashscope.aliyuncs.com/compatible-mode/v1')}" />
+        <label class="field-label">模型（如 qwen-plus / qwen-max / qwen-turbo）</label>
+        <input class="field-input" id="llm-model" value="${escape(c.model)}" placeholder="qwen-plus" />
+      </details>
+      <button class="btn primary settings-save" data-action="save-llm">保存</button>
+      <div class="ds-note">
+        命名建议会把每个图层的<strong>类型、当前名、父层名、内部文字</strong>发送到该端点
+        （OpenAI 兼容 <code>/chat/completions</code>）。不发送截图。Key 仅存本机 clientStorage。
+      </div>
+    </div>`;
+}
+
 function render() {
   if (state.view === 'tokens') {
     root.innerHTML = renderTokenView();
     return;
   }
+  if (state.view === 'settings') {
+    root.innerHTML = renderSettingsView();
+    return;
+  }
 
-  const colorViolations = state.violations.filter((v) => v.kind !== 'text');
+  const colorViolations = state.violations.filter((v) => v.kind === 'color-fill' || v.kind === 'color-stroke');
   const textViolations = state.violations.filter((v) => v.kind === 'text');
+  const layoutViolations = state.violations.filter((v) => v.category === 'autolayout');
+  const namingViolations = state.violations.filter((v) => v.category === 'naming');
   const pct = state.progress.total > 0 ? Math.round((state.progress.processed / state.progress.total) * 100) : 0;
   const scanning = state.status === 'scanning';
 
@@ -294,27 +379,29 @@ function render() {
   const stats =
     state.status === 'done'
       ? `<div class="stats">
-          <span><strong>${state.violations.length}</strong> 处违规</span>
-          <span><strong>${colorViolations.length}</strong> 颜色</span>
-          <span><strong>${textViolations.length}</strong> 字体</span>
-          <span>扫描范围: ${escape(state.scanScope ?? '')} · ${state.scanned} 节点${state.scanSkipped > 0 ? ` · 已忽略 ${state.scanSkipped}` : ''}</span>
+          <span><strong>${state.violations.length}</strong> 处</span>
+          <span>${colorViolations.length} 颜色 · ${textViolations.length} 字体 · ${layoutViolations.length} 布局 · ${namingViolations.length} 命名</span>
+          <span>${escape(state.scanScope ?? '')} · ${state.scanned} 节点${state.scanSkipped > 0 ? ` · 已忽略 ${state.scanSkipped}` : ''}</span>
         </div>`
       : state.status === 'idle'
         ? `<div class="stats">${selectionHint}</div>`
         : `<div class="stats">扫描中… ${state.progress.processed}/${state.progress.total}</div>`;
 
+  const groupBlock = (title: string, items: Violation[]) =>
+    items.length > 0 ? `<div class="group">${title} (${items.length})</div>${items.map(renderCard).join('')}` : '';
+
   let listHtml = '';
   if (state.status === 'done') {
     if (state.violations.length === 0) {
-      listHtml = `<div class="empty">🎉 当前页面所有颜色和字体都已绑定到 token。</div>`;
+      listHtml = `<div class="empty">🎉 选区内颜色、字体、布局、命名都没发现问题。</div>`;
     } else {
-      if (colorViolations.length > 0) {
-        listHtml += `<div class="group">颜色 (${colorViolations.length})</div>`;
-        listHtml += colorViolations.map(renderCard).join('');
-      }
-      if (textViolations.length > 0) {
-        listHtml += `<div class="group">字体 (${textViolations.length})</div>`;
-        listHtml += textViolations.map(renderCard).join('');
+      listHtml += groupBlock('颜色', colorViolations);
+      listHtml += groupBlock('字体', textViolations);
+      listHtml += groupBlock('布局 (auto-layout)', layoutViolations);
+      if (namingViolations.length > 0) {
+        const aiBtn = `<button class="link-btn" data-action="ai-naming">✨ AI 命名建议</button>`;
+        listHtml += `<div class="group">命名 (${namingViolations.length}) ${aiBtn}</div>`;
+        listHtml += namingViolations.map(renderCard).join('');
       }
     }
   } else if (state.status === 'idle') {
@@ -349,12 +436,29 @@ function render() {
     <span class="token-entry-chev">›</span>
   </button>`;
 
+  const catDefs: { key: keyof ScanCategorySelection; label: string }[] = [
+    { key: 'token', label: 'Token' },
+    { key: 'autolayout', label: '布局' },
+    { key: 'naming', label: '命名' },
+  ];
+  const categoryRow = `<div class="topbar-row">
+    <span class="muted" style="font-size:10px">扫描:</span>
+    <div class="cat-toggles">${catDefs
+      .map(
+        (c) =>
+          `<button class="cat-chip ${state.scanCategories[c.key] ? 'on' : ''}" data-action="toggle-category" data-cat="${c.key}">${state.scanCategories[c.key] ? '✓ ' : ''}${c.label}</button>`,
+      )
+      .join('')}</div>
+  </div>`;
+
   root.innerHTML = `
     <div class="topbar">
       <div class="topbar-row">
         <div class="title">Token Scanner</div>
+        <button class="icon-btn" data-action="open-settings" title="LLM 命名设置">⚙</button>
         <button class="scan-btn" data-action="scan" ${canScan ? '' : 'disabled'}>${scanning ? '扫描中…' : '扫描选中画板'}</button>
       </div>
+      ${categoryRow}
       ${platformRow}
       ${tokenEntry}
       ${stats}
@@ -387,6 +491,7 @@ root.addEventListener('click', (e) => {
   if (action === 'scan') {
     state.status = 'scanning';
     state.violations = [];
+    state.namingSuggestions = {};
     state.progress = { processed: 0, total: 0 };
     render();
     send({ type: 'scan' });
@@ -394,12 +499,40 @@ root.addEventListener('click', (e) => {
     send({ type: 'selectNode', nodeId: btn.dataset.node! });
   } else if (action === 'apply') {
     send({ type: 'applyFix', violationId: btn.dataset.id!, tokenId: btn.dataset.token! });
+  } else if (action === 'apply-layout') {
+    send({ type: 'applyLayoutFix', violationId: btn.dataset.id! });
+  } else if (action === 'toggle-category') {
+    const cat = btn.dataset.cat as keyof ScanCategorySelection;
+    const next = { ...state.scanCategories, [cat]: !state.scanCategories[cat] };
+    // Keep at least one category on.
+    if (next.token || next.autolayout || next.naming) {
+      state.scanCategories = next;
+      render();
+      send({ type: 'setScanCategories', categories: next });
+    }
   } else if (action === 'view-tokens') {
     state.view = 'tokens';
+    render();
+  } else if (action === 'open-settings') {
+    state.view = 'settings';
     render();
   } else if (action === 'back-to-scan') {
     state.view = 'scan';
     render();
+  } else if (action === 'save-llm') {
+    const base = (document.getElementById('llm-base') as HTMLInputElement | null)?.value ?? '';
+    const model = (document.getElementById('llm-model') as HTMLInputElement | null)?.value ?? '';
+    const key = (document.getElementById('llm-key') as HTMLInputElement | null)?.value ?? '';
+    send({ type: 'setLlmConfig', baseUrl: base, model, apiKey: key });
+  } else if (action === 'ai-naming') {
+    if (!state.llmConfig.configured || !state.llmConfig.hasKey) {
+      state.view = 'settings';
+      render();
+    } else {
+      send({ type: 'requestNamingSuggestions' });
+    }
+  } else if (action === 'apply-rename') {
+    send({ type: 'applyRename', violationId: btn.dataset.id!, name: btn.dataset.name! });
   } else if (action === 'reload-tokens') {
     e.stopPropagation();
     state.tokens.loaded = false;
@@ -441,6 +574,20 @@ window.addEventListener('message', (e: MessageEvent) => {
     render();
   } else if (msg.type === 'whitelistChanged') {
     state.whitelist = msg.entries;
+    render();
+  } else if (msg.type === 'scanCategoriesChanged') {
+    state.scanCategories = msg.categories;
+    render();
+  } else if (msg.type === 'llmConfig') {
+    state.llmConfig = msg.config;
+    if (state.view === 'settings') render();
+  } else if (msg.type === 'namingSuggestionsStart') {
+    for (const id of msg.violationIds) state.namingSuggestions[id] = { loading: true };
+    render();
+  } else if (msg.type === 'namingSuggestions') {
+    for (const r of msg.results) {
+      state.namingSuggestions[r.violationId] = { name: r.name, error: r.error, loading: false };
+    }
     render();
   } else if (msg.type === 'scanProgress') {
     state.progress = { processed: msg.processed, total: msg.total };

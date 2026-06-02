@@ -121,12 +121,14 @@ export function checkNodeColors(
         id: `${node.id}:${target.field}:${index}`,
         nodeId: node.id,
         nodeName: node.name,
+        category: 'token',
         kind: target.field === 'fills' ? 'color-fill' : 'color-stroke',
         currentValue: displayValue,
         paintIndex: index,
         colorHex: hex,
         colorAlpha: alpha,
         suggestion,
+        fix: suggestion ? { kind: 'apply-token' } : undefined,
       });
     });
   }

@@ -54,6 +54,20 @@ scripts/build-html.js  # 把 ui.js + styles.css 内联进 ui.html
 
 > 前提：订阅的库都是自己 token 化过的 DS 库；若引入未 token 化的第三方 UI kit，其组件也会被一并跳过。
 
+## 规范检查维度
+
+主界面顶部「扫描」开关可多选要检测的维度（至少留一个，记忆在 clientStorage）：
+
+- **Token**：颜色（fill/stroke）+ 字体，对照 BMDS token。
+- **布局 (auto-layout)**：硬规则检测 —— 用了 Group、或 Frame 有多个子元素却没 auto-layout。**仅检测 + 定位**（自动修复效果不稳定，已搁置）。
+- **命名**：先用正则抓默认名（`Frame 427` 等）；再可选接 LLM 给语义化建议并一键改名。
+
+## LLM 命名（实验）
+
+- 在「⚙ LLM 命名设置」里填 **代理地址 / 模型 / API Key**（OpenAI 兼容 `/chat/completions`，Qwen DashScope compatible-mode 可用；代理自带 key 时可留空）。配置存本机 `clientStorage`。
+- 命名分组点「✨ AI 命名建议」→ 把每个图层的**类型、当前名、父层名、内部文字**批量发给模型 → 返回 PascalCase 建议 → 每条可「改名」一键应用（`node.name`）。不发送截图（多模态留作后续）。
+- `manifest.json` 的 `networkAccess.allowedDomains` 现为 `["*"]` 以支持可配置端点；如需收紧，改成你们代理的固定域名即可。
+
 ## 已知限制
 
 - 嵌套实例的 override 判定以顶层 `overrides` 为准，深层嵌套可能漏判（偏向少报，不会误报）
