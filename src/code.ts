@@ -18,7 +18,11 @@ let currentTokens: TokenIndex | null = null;
 let platformFilter: PlatformFilterValue = 'APP';
 let whitelist: string[] = [];
 let scanCategories: ScanCategorySelection = { token: true, autolayout: true, naming: true };
-let llmConfig: LlmConfig = { baseUrl: '', apiKey: '', model: '' };
+
+// Team-wide defaults — colleagues only need to paste their own API key.
+const DEFAULT_LLM_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+const DEFAULT_LLM_MODEL = 'qwen-plus';
+let llmConfig: LlmConfig = { baseUrl: DEFAULT_LLM_BASE_URL, apiKey: '', model: DEFAULT_LLM_MODEL };
 
 function postLlmConfig() {
   post({
@@ -212,9 +216,9 @@ async function bootstrap() {
     if (storedLlm && typeof storedLlm === 'object') {
       const o = storedLlm as Record<string, unknown>;
       llmConfig = {
-        baseUrl: typeof o.baseUrl === 'string' ? o.baseUrl : '',
+        baseUrl: typeof o.baseUrl === 'string' && o.baseUrl ? o.baseUrl : DEFAULT_LLM_BASE_URL,
         apiKey: typeof o.apiKey === 'string' ? o.apiKey : '',
-        model: typeof o.model === 'string' ? o.model : '',
+        model: typeof o.model === 'string' && o.model ? o.model : DEFAULT_LLM_MODEL,
       };
     }
   } catch {
@@ -254,7 +258,12 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       whitelist = whitelist.filter((w) => w !== msg.name);
       await saveWhitelist();
     } else if (msg.type === 'setLlmConfig') {
-      llmConfig = { baseUrl: msg.baseUrl.trim(), apiKey: msg.apiKey.trim(), model: msg.model.trim() };
+      // Blank URL/model fall back to team defaults; blank key keeps the existing one.
+      llmConfig = {
+        baseUrl: msg.baseUrl.trim() || DEFAULT_LLM_BASE_URL,
+        model: msg.model.trim() || DEFAULT_LLM_MODEL,
+        apiKey: msg.apiKey.trim() || llmConfig.apiKey,
+      };
       await figma.clientStorage.setAsync(LLM_CONFIG_KEY, llmConfig);
       postLlmConfig();
       figma.notify('LLM 配置已保存');

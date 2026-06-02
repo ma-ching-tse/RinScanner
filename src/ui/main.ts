@@ -330,17 +330,22 @@ function renderSettingsView(): string {
       <div class="view-title">LLM 命名设置 ${status}</div>
     </div>
     <div class="view-scroll settings-body">
-      <label class="field-label">代理地址 (Base URL)</label>
-      <input class="field-input" id="llm-base" value="${escape(c.baseUrl)}" placeholder="https://your-proxy/v1" />
-      <label class="field-label">模型</label>
-      <input class="field-input" id="llm-model" value="${escape(c.model)}" placeholder="qwen-plus" />
-      <label class="field-label">API Key${c.hasKey ? '（已保存，留空则不修改）' : '（代理自带 key 可留空）'}</label>
-      <input class="field-input" id="llm-key" type="password" placeholder="${c.hasKey ? '••••••••' : 'sk-...'}" />
+      <div class="ds-note" style="margin-bottom:10px">
+        地址和模型已是团队默认值，<strong>你只需粘贴自己的 API Key</strong> 即可（地址/模型留默认就行）。
+      </div>
+      <label class="field-label">API Key${c.hasKey ? '（已保存，留空则不修改）' : '（百炼 sk- 开头）'}</label>
+      <input class="field-input" id="llm-key" type="password" placeholder="${c.hasKey ? '••••••••（已保存）' : 'sk-...'}" />
+      <details class="adv-config">
+        <summary>高级：地址 / 模型</summary>
+        <label class="field-label">代理地址 (Base URL)</label>
+        <input class="field-input" id="llm-base" value="${escape(c.baseUrl)}" placeholder="${escape('https://dashscope.aliyuncs.com/compatible-mode/v1')}" />
+        <label class="field-label">模型</label>
+        <input class="field-input" id="llm-model" value="${escape(c.model)}" placeholder="qwen-plus" />
+      </details>
       <button class="btn primary settings-save" data-action="save-llm">保存</button>
       <div class="ds-note">
         命名建议会把每个图层的<strong>类型、当前名、父层名、内部文字</strong>发送到该端点
-        （OpenAI 兼容 <code>/chat/completions</code>，Qwen DashScope compatible-mode 可用）。
-        不发送截图。Key 仅存本机 clientStorage。
+        （OpenAI 兼容 <code>/chat/completions</code>）。不发送截图。Key 仅存本机 clientStorage。
       </div>
     </div>`;
 }
@@ -520,7 +525,7 @@ root.addEventListener('click', (e) => {
     const key = (document.getElementById('llm-key') as HTMLInputElement | null)?.value ?? '';
     send({ type: 'setLlmConfig', baseUrl: base, model, apiKey: key });
   } else if (action === 'ai-naming') {
-    if (!state.llmConfig.configured) {
+    if (!state.llmConfig.configured || !state.llmConfig.hasKey) {
       state.view = 'settings';
       render();
     } else {
