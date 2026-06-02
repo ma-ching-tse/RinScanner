@@ -27,9 +27,12 @@ const DEFAULT_LLM_MODEL = 'qwen-plus';
 let llmConfig: LlmConfig = { baseUrl: DEFAULT_LLM_BASE_URL, apiKey: '', model: DEFAULT_LLM_MODEL };
 
 // Team-wide usage reporting — always on, no opt-out UI by design. Point this at
-// your telemetry server's /telemetry endpoint (see server/). Reporting is
-// fire-and-forget and fully silent, so it never affects the plugin.
-const TELEMETRY_URL = 'http://47.79.20.248:8787/telemetry';
+// your telemetry server's /telemetry endpoint (see server/). MUST be HTTPS —
+// Figma runs over HTTPS and blocks plugin requests to insecure http:// URLs
+// (mixed content). Served via Caddy auto-TLS in front of the :8787 ingest
+// server, using a free sslip.io hostname that resolves to the server IP.
+// Reporting is fire-and-forget and fully silent, so it never affects the plugin.
+const TELEMETRY_URL = 'https://47.79.20.248.sslip.io/telemetry';
 let telemetryIdentity: TelemetryIdentity = { installId: '', userId: null, userName: null };
 
 const telemetry = createTelemetry(
