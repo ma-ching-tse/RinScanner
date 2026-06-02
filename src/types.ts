@@ -120,7 +120,23 @@ export type UIMessage =
   | { type: 'removeFromWhitelist'; name: string }
   | { type: 'selectNode'; nodeId: string }
   | { type: 'applyFix'; violationId: string; tokenId: string }
-  | { type: 'applyLayoutFix'; violationId: string };
+  | { type: 'applyLayoutFix'; violationId: string }
+  | { type: 'requestNamingSuggestions' }
+  | { type: 'applyRename'; violationId: string; name: string }
+  | { type: 'setLlmConfig'; baseUrl: string; apiKey: string; model: string };
+
+export interface LlmConfigPublic {
+  configured: boolean;
+  baseUrl: string;
+  model: string;
+  hasKey: boolean;
+}
+
+export interface NamingSuggestionResult {
+  violationId: string;
+  name?: string;
+  error?: string;
+}
 
 export interface TextStyleSummary {
   id: string;
@@ -145,4 +161,7 @@ export type PluginMessage =
   | { type: 'scanCategoriesChanged'; categories: ScanCategorySelection }
   | { type: 'scanProgress'; processed: number; total: number }
   | { type: 'scanResult'; violations: Violation[]; scanned: number; scope: string; skipped: number }
-  | { type: 'fixApplied'; violationId: string; ok: boolean; error?: string };
+  | { type: 'fixApplied'; violationId: string; ok: boolean; error?: string }
+  | { type: 'llmConfig'; config: LlmConfigPublic }
+  | { type: 'namingSuggestionsStart'; violationIds: string[] }
+  | { type: 'namingSuggestions'; results: NamingSuggestionResult[] };

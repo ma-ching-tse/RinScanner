@@ -9,6 +9,7 @@
   "enableProposedApi": false,
   "documentAccess": "dynamic-page",
   "networkAccess": {
-    "allowedDomains": ["none"]
+    "allowedDomains": ["*"],
+    "reasoning": "调用内部 LLM 代理为图层生成命名建议；端点在插件设置中配置"
   }
 }

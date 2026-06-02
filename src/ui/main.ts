@@ -1,6 +1,7 @@
 import {
   ColorVariableSummary,
   DataSourceInfo,
+  LlmConfigPublic,
   PlatformFilterValue,
   PluginMessage,
   ScanCategorySelection,
@@ -21,8 +22,10 @@ interface State {
   platformFilter: PlatformFilterValue;
   platformDivergence: boolean;
   scanCategories: ScanCategorySelection;
-  view: 'scan' | 'tokens';
+  view: 'scan' | 'tokens' | 'settings';
   tokenFilter: string;
+  llmConfig: LlmConfigPublic;
+  namingSuggestions: Record<string, { name?: string; error?: string; loading?: boolean }>;
   whitelist: string[];
   whitelistOpen: boolean;
   selection: { count: number; rootName: string | null };
@@ -42,6 +45,8 @@ const state: State = {
   scanCategories: { token: true, autolayout: true, naming: true },
   view: 'scan',
   tokenFilter: '',
+  llmConfig: { configured: false, baseUrl: '', model: '', hasKey: false },
+  namingSuggestions: {},
   whitelist: [],
   whitelistOpen: false,
   selection: { count: 0, rootName: null },
@@ -128,11 +133,20 @@ function renderStructuralCard(v: Violation): string {
   const kindLabel =
     v.kind === 'autolayout-group' ? 'Group' : v.kind === 'autolayout-none' ? '无 auto-layout' : '默认命名';
 
-  let fixBtn = '';
-  if (v.fix && (v.fix.kind === 'add-autolayout' || v.fix.kind === 'convert-group')) {
-    const label = v.fix.kind === 'convert-group' ? '转成 Frame' : '加 auto-layout';
-    const beta = v.fix.beta ? `<span class="beta-tag">Beta</span>` : '';
-    fixBtn = `<button class="btn primary" data-action="apply-layout" data-id="${v.id}">${label}${beta}</button>`;
+  // auto-layout auto-fix is shelved (results were unreliable) — detection + locate only.
+  // naming gets an AI suggestion + rename action.
+  let extraBtn = '';
+  let suggestionRow = '';
+  if (v.category === 'naming') {
+    const sug = state.namingSuggestions[v.id];
+    if (sug && sug.name) {
+      suggestionRow = `<div class="suggestion exact">建议: ${escape(sug.name)}</div>`;
+      extraBtn = `<button class="btn primary" data-action="apply-rename" data-id="${v.id}" data-name="${escape(sug.name)}">改名</button>`;
+    } else if (sug && sug.error) {
+      suggestionRow = `<div class="no-match">AI 建议失败: ${escape(sug.error)}</div>`;
+    } else if (sug && sug.loading) {
+      suggestionRow = `<div class="no-match">AI 生成中…</div>`;
+    }
   }
 
   return `<div class="card" data-violation="${v.id}">
@@ -140,9 +154,10 @@ function renderStructuralCard(v: Violation): string {
     <div class="card-body">
       <div class="card-title">${escape(v.nodeName)} <span style="color:var(--text-secondary);font-weight:400">· ${kindLabel}</span></div>
       <div class="card-meta">${escape(v.message ?? v.currentValue)}</div>
+      ${suggestionRow}
       <div class="actions">
         <button class="btn" data-action="locate" data-node="${v.nodeId}">定位</button>
-        ${fixBtn}
+        ${extraBtn}
       </div>
     </div>
   </div>`;
@@ -305,9 +320,38 @@ function renderWhitelistPanel(): string {
   </div>`;
 }
 
+function renderSettingsView(): string {
+  const c = state.llmConfig;
+  const status = c.configured
+    ? `<span class="src-badge library">已配置</span>`
+    : `<span class="src-badge style">未配置</span>`;
+  return `<div class="view-header">
+      <button class="icon-btn" data-action="back-to-scan" title="返回">←</button>
+      <div class="view-title">LLM 命名设置 ${status}</div>
+    </div>
+    <div class="view-scroll settings-body">
+      <label class="field-label">代理地址 (Base URL)</label>
+      <input class="field-input" id="llm-base" value="${escape(c.baseUrl)}" placeholder="https://your-proxy/v1" />
+      <label class="field-label">模型</label>
+      <input class="field-input" id="llm-model" value="${escape(c.model)}" placeholder="qwen-plus" />
+      <label class="field-label">API Key${c.hasKey ? '（已保存，留空则不修改）' : '（代理自带 key 可留空）'}</label>
+      <input class="field-input" id="llm-key" type="password" placeholder="${c.hasKey ? '••••••••' : 'sk-...'}" />
+      <button class="btn primary settings-save" data-action="save-llm">保存</button>
+      <div class="ds-note">
+        命名建议会把每个图层的<strong>类型、当前名、父层名、内部文字</strong>发送到该端点
+        （OpenAI 兼容 <code>/chat/completions</code>，Qwen DashScope compatible-mode 可用）。
+        不发送截图。Key 仅存本机 clientStorage。
+      </div>
+    </div>`;
+}
+
 function render() {
   if (state.view === 'tokens') {
     root.innerHTML = renderTokenView();
+    return;
+  }
+  if (state.view === 'settings') {
+    root.innerHTML = renderSettingsView();
     return;
   }
 
@@ -349,7 +393,11 @@ function render() {
       listHtml += groupBlock('颜色', colorViolations);
       listHtml += groupBlock('字体', textViolations);
       listHtml += groupBlock('布局 (auto-layout)', layoutViolations);
-      listHtml += groupBlock('命名', namingViolations);
+      if (namingViolations.length > 0) {
+        const aiBtn = `<button class="link-btn" data-action="ai-naming">✨ AI 命名建议</button>`;
+        listHtml += `<div class="group">命名 (${namingViolations.length}) ${aiBtn}</div>`;
+        listHtml += namingViolations.map(renderCard).join('');
+      }
     }
   } else if (state.status === 'idle') {
     listHtml = `<div class="empty">在 Figma 画布上选中一个或多个画板/节点，然后点上方「扫描选中画板」。</div>`;
@@ -402,6 +450,7 @@ function render() {
     <div class="topbar">
       <div class="topbar-row">
         <div class="title">Token Scanner</div>
+        <button class="icon-btn" data-action="open-settings" title="LLM 命名设置">⚙</button>
         <button class="scan-btn" data-action="scan" ${canScan ? '' : 'disabled'}>${scanning ? '扫描中…' : '扫描选中画板'}</button>
       </div>
       ${categoryRow}
@@ -437,6 +486,7 @@ root.addEventListener('click', (e) => {
   if (action === 'scan') {
     state.status = 'scanning';
     state.violations = [];
+    state.namingSuggestions = {};
     state.progress = { processed: 0, total: 0 };
     render();
     send({ type: 'scan' });
@@ -458,9 +508,26 @@ root.addEventListener('click', (e) => {
   } else if (action === 'view-tokens') {
     state.view = 'tokens';
     render();
+  } else if (action === 'open-settings') {
+    state.view = 'settings';
+    render();
   } else if (action === 'back-to-scan') {
     state.view = 'scan';
     render();
+  } else if (action === 'save-llm') {
+    const base = (document.getElementById('llm-base') as HTMLInputElement | null)?.value ?? '';
+    const model = (document.getElementById('llm-model') as HTMLInputElement | null)?.value ?? '';
+    const key = (document.getElementById('llm-key') as HTMLInputElement | null)?.value ?? '';
+    send({ type: 'setLlmConfig', baseUrl: base, model, apiKey: key });
+  } else if (action === 'ai-naming') {
+    if (!state.llmConfig.configured) {
+      state.view = 'settings';
+      render();
+    } else {
+      send({ type: 'requestNamingSuggestions' });
+    }
+  } else if (action === 'apply-rename') {
+    send({ type: 'applyRename', violationId: btn.dataset.id!, name: btn.dataset.name! });
   } else if (action === 'reload-tokens') {
     e.stopPropagation();
     state.tokens.loaded = false;
@@ -505,6 +572,17 @@ window.addEventListener('message', (e: MessageEvent) => {
     render();
   } else if (msg.type === 'scanCategoriesChanged') {
     state.scanCategories = msg.categories;
+    render();
+  } else if (msg.type === 'llmConfig') {
+    state.llmConfig = msg.config;
+    if (state.view === 'settings') render();
+  } else if (msg.type === 'namingSuggestionsStart') {
+    for (const id of msg.violationIds) state.namingSuggestions[id] = { loading: true };
+    render();
+  } else if (msg.type === 'namingSuggestions') {
+    for (const r of msg.results) {
+      state.namingSuggestions[r.violationId] = { name: r.name, error: r.error, loading: false };
+    }
     render();
   } else if (msg.type === 'scanProgress') {
     state.progress = { processed: msg.processed, total: msg.total };
