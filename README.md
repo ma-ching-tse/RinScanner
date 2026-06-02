@@ -59,6 +59,8 @@ scripts/build-html.js  # 把 ui.js + styles.css 内联进 ui.html
 主界面顶部「扫描」开关可多选要检测的维度（至少留一个，记忆在 clientStorage）：
 
 - **Token**：颜色（fill/stroke）+ 字体，对照 BMDS token。
+  - 检测真值来自 `src/tokens/bmds.ts`（写死）。**修复优先绑定 Figma 变量** —— 这才能让 Dev Mode / MCP 出码时生成 `var(--token)` 而非硬编码值；变量还会自动按 light/dark 模式解析。
+  - 文件中有可用 BMDS 变量库时，「值对但没绑变量」的颜色也会被标出来（因为 MCP 仍会硬编码）；没有变量库时这类不标，且修复退回「精确值（未绑定）」。
 - **布局 (auto-layout)**：硬规则检测 —— 用了 Group、或 Frame 有多个子元素却没 auto-layout。**仅检测 + 定位**（自动修复效果不稳定，已搁置）。
 - **命名**：先用正则抓默认名（`Frame 427` 等）；再可选接 LLM 给语义化建议并一键改名。
 

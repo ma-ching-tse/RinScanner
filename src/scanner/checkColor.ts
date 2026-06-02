@@ -1,6 +1,13 @@
 import { ColorToken, Suggestion, Violation } from '../types';
 import { colorKey } from './loadTokens';
 import { rgbToHex } from './loadTokens';
+import { parseBmdsTokenId } from '../tokens/bmds';
+
+/** Figma variable slash-path name for a BMDS token id, e.g. "Function/CEX/Brand". */
+function tokenVarName(tokenId: string): string | null {
+  const p = parseBmdsTokenId(tokenId);
+  return p ? `${p.group}/${p.name}` : null;
+}
 
 const NEAR_THRESHOLD = 8;
 const ALPHA_EPSILON = 0.01;
@@ -94,6 +101,7 @@ export function checkNodeColors(
   byKey: Map<string, ColorToken>,
   allowFills = true,
   allowStrokes = true,
+  bindableNames: Set<string> = new Set(),
 ): Violation[] {
   const violations: Violation[] = [];
   const targets = getColorTargets(node);
@@ -113,8 +121,17 @@ export function checkNodeColors(
       const alpha = paint.opacity ?? 1;
       const suggestion = suggestForPaint(hex, alpha, tokens, byKey);
 
-      // Skip when paint matches a token exactly — already "token-equivalent".
-      if (suggestion && suggestion.confidence === 'exact') return;
+      // Value already matches a token exactly. It's still a raw value (not bound
+      // to a variable), so MCP/Dev Mode would hardcode it. Flag it ONLY when the
+      // matching Figma variable is actually available to bind — otherwise leave
+      // it (binding isn't possible, so flagging would be unactionable noise).
+      let unboundButCorrect = false;
+      if (suggestion && suggestion.confidence === 'exact') {
+        const vn = tokenVarName(suggestion.tokenId);
+        const bindable = vn ? bindableNames.has(vn) : false;
+        if (!bindable) return;
+        unboundButCorrect = true;
+      }
 
       const displayValue = alpha < 1 ? `${hex} · ${Math.round(alpha * 100)}%` : hex;
       violations.push({
@@ -124,6 +141,7 @@ export function checkNodeColors(
         category: 'token',
         kind: target.field === 'fills' ? 'color-fill' : 'color-stroke',
         currentValue: displayValue,
+        message: unboundButCorrect ? '值对但未绑定变量，MCP 会硬编码 — 建议绑定' : undefined,
         paintIndex: index,
         colorHex: hex,
         colorAlpha: alpha,
