@@ -4,6 +4,7 @@ import { applyFix } from './fixer/applyFix';
 import { applyLayoutFix } from './fixer/applyLayoutFix';
 import { LlmConfig, gatherNamingContext, isLlmConfigured, suggestNames } from './llm/naming';
 import { hasPlatformDivergence } from './tokens/bmds';
+import { TelemetryIdentity, createTelemetry, generateInstallId } from './telemetry/telemetry';
 import { PlatformFilterValue, PluginMessage, ScanCategorySelection, UIMessage, Violation } from './types';
 import type { TokenIndex } from './scanner/loadTokens';
 
@@ -13,6 +14,7 @@ const PLATFORM_FILTER_KEY = 'bmds-platform-filter';
 const WHITELIST_KEY = 'bmds-component-whitelist';
 const SCAN_CATEGORIES_KEY = 'bmds-scan-categories';
 const LLM_CONFIG_KEY = 'bmds-llm-config';
+const INSTALL_ID_KEY = 'bmds-install-id';
 const violationsById = new Map<string, Violation>();
 let currentTokens: TokenIndex | null = null;
 let platformFilter: PlatformFilterValue = 'APP';
@@ -23,6 +25,20 @@ let scanCategories: ScanCategorySelection = { token: true, autolayout: true, nam
 const DEFAULT_LLM_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
 const DEFAULT_LLM_MODEL = 'qwen-plus';
 let llmConfig: LlmConfig = { baseUrl: DEFAULT_LLM_BASE_URL, apiKey: '', model: DEFAULT_LLM_MODEL };
+
+// Team-wide usage reporting — always on, no opt-out UI by design. Point this at
+// your telemetry server's /telemetry endpoint (see server/). Reporting is
+// fire-and-forget and fully silent, so it never affects the plugin.
+const TELEMETRY_URL = 'http://47.79.20.248:8787/telemetry';
+let telemetryIdentity: TelemetryIdentity = { installId: '', userId: null, userName: null };
+
+const telemetry = createTelemetry(
+  () => ({ url: TELEMETRY_URL }),
+  () => ({
+    identity: telemetryIdentity,
+    file: { fileKey: figma.fileKey ?? null, fileName: figma.root.name || null },
+  }),
+);
 
 function postLlmConfig() {
   post({
@@ -78,6 +94,13 @@ async function runNamingSuggestions() {
     }
   }
   post({ type: 'namingSuggestions', results });
+  const succeeded = results.filter((r) => r.name).length;
+  telemetry.track({
+    event: 'naming_suggest',
+    requested: results.length,
+    succeeded,
+    failed: results.length - succeeded,
+  });
 }
 
 function isValidFilter(v: unknown): v is PlatformFilterValue {
@@ -178,12 +201,26 @@ async function runScan() {
     post({ type: 'scanProgress', processed, total });
   });
   for (const v of result.violations) violationsById.set(v.id, v);
+  const scope = describeSelection(selection);
   post({
     type: 'scanResult',
     violations: result.violations,
     scanned: result.scanned,
-    scope: describeSelection(selection),
+    scope,
     skipped: result.skipped,
+  });
+  telemetry.track({
+    event: 'scan',
+    scanned: result.scanned,
+    scope,
+    platformFilter,
+    categories: scanCategories,
+    found: {
+      token: result.violations.filter((v) => v.category === 'token').length,
+      autolayout: result.violations.filter((v) => v.category === 'autolayout').length,
+      naming: result.violations.filter((v) => v.category === 'naming').length,
+      total: result.violations.length,
+    },
   });
 }
 
@@ -224,6 +261,22 @@ async function bootstrap() {
   } catch {
     // ignore — use default
   }
+  // Telemetry: stable install id + named identity (always-on reporting).
+  try {
+    let installId = await figma.clientStorage.getAsync(INSTALL_ID_KEY);
+    if (typeof installId !== 'string' || !installId) {
+      installId = generateInstallId();
+      await figma.clientStorage.setAsync(INSTALL_ID_KEY, installId);
+    }
+    telemetryIdentity = {
+      installId,
+      userId: figma.currentUser?.id ?? null,
+      userName: figma.currentUser?.name ?? null,
+    };
+  } catch {
+    // ignore — reporting degrades to anonymous/disabled
+  }
+
   post({ type: 'whitelistChanged', entries: whitelist });
   post({ type: 'scanCategoriesChanged', categories: scanCategories });
   postLlmConfig();
@@ -280,6 +333,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
         if (!node || !('name' in node)) throw new Error('节点不存在');
         (node as SceneNode).name = msg.name;
         violationsById.delete(msg.violationId);
+        telemetry.track({ event: 'fix', fixKind: 'rename' });
         post({ type: 'fixApplied', violationId: msg.violationId, ok: true });
       } catch (err) {
         post({
@@ -304,6 +358,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       try {
         await applyFix(v, msg.tokenId);
         violationsById.delete(msg.violationId);
+        telemetry.track({ event: 'fix', fixKind: 'apply-token' });
         post({ type: 'fixApplied', violationId: msg.violationId, ok: true });
       } catch (err) {
         post({
@@ -322,6 +377,7 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       try {
         const node = await applyLayoutFix(v);
         violationsById.delete(msg.violationId);
+        telemetry.track({ event: 'fix', fixKind: v.fix?.kind ?? 'layout' });
         figma.currentPage.selection = [node];
         figma.viewport.scrollAndZoomIntoView([node]);
         post({ type: 'fixApplied', violationId: msg.violationId, ok: true });

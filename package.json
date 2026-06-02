@@ -8,7 +8,9 @@
     "build:ui": "esbuild src/ui/main.ts --bundle --platform=browser --target=es2017 --outfile=dist/ui.js",
     "build:html": "node scripts/build-html.js",
     "build": "npm run build:code && npm run build:ui && npm run build:html",
-    "watch": "npm run build && npm run build:code -- --watch & npm run build:ui -- --watch"
+    "watch": "npm run build && npm run build:code -- --watch & npm run build:ui -- --watch",
+    "telemetry:server": "node server/index.js",
+    "telemetry:report": "node server/report.js"
   },
   "devDependencies": {
     "@figma/plugin-typings": "^1.100.0",

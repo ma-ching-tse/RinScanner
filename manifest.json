@@ -6,7 +6,7 @@
   "ui": "dist/ui.html",
   "editorType": ["figma"],
   "capabilities": [],
-  "permissions": ["teamlibrary"],
+  "permissions": ["teamlibrary", "currentuser"],
   "enableProposedApi": false,
   "documentAccess": "dynamic-page",
   "networkAccess": {
