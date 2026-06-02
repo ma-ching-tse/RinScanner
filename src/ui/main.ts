@@ -336,10 +336,10 @@ function renderSettingsView(): string {
       <label class="field-label">API Key${c.hasKey ? '（已保存，留空则不修改）' : '（百炼 sk- 开头）'}</label>
       <input class="field-input" id="llm-key" type="password" placeholder="${c.hasKey ? '••••••••（已保存）' : 'sk-...'}" />
       <details class="adv-config">
-        <summary>高级：地址 / 模型</summary>
-        <label class="field-label">代理地址 (Base URL)</label>
+        <summary>高级：接口地址 / 模型（换 Qwen 模型只改下面「模型」，地址不用动）</summary>
+        <label class="field-label">接口地址 (Base URL) · 阿里云百炼固定为下方默认值</label>
         <input class="field-input" id="llm-base" value="${escape(c.baseUrl)}" placeholder="${escape('https://dashscope.aliyuncs.com/compatible-mode/v1')}" />
-        <label class="field-label">模型</label>
+        <label class="field-label">模型（如 qwen-plus / qwen-max / qwen-turbo）</label>
         <input class="field-input" id="llm-model" value="${escape(c.model)}" placeholder="qwen-plus" />
       </details>
       <button class="btn primary settings-save" data-action="save-llm">保存</button>
