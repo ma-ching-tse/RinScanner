@@ -54,6 +54,20 @@ RinScanner 使用统计   ·   最近 7 天
 
 **修复率 = 修复数 ÷ 发现数**，是插件采纳度的核心代理指标，可直接拿去推广汇报。
 
+## 3. 只读接口（给定时任务 / 自动周报用）
+
+`index.js` 暴露一个 **密钥保护**的只读接口，让外部（如定时任务）无需 SSH 即可通过 HTTPS 拉取聚合数据：
+
+```
+GET /report?key=<REPORT_KEY>&days=7
+```
+
+- 返回聚合 JSON：`{ days, period, totals{uniqueUsers,scans,found,fixes,naming,fixRate}, users[], files[], fixKinds{} }`
+- `days` 默认 7；密钥错误 / 缺失 → `403 forbidden`
+- 密钥默认写死在 `index.js`（`REPORT_KEY`），可用环境变量覆盖：`REPORT_KEY=xxx node server/index.js`
+
+> 本仓库配套了一个**每周五 10:00** 的定时任务（`~/.claude/scheduled-tasks/rinscanner-weekly-report`），自动拉取过去 7 天数据、生成中文周报并推送通知。
+
 ## 让插件上报到这里
 
 插件默认**不上报**（`src/code.ts` 里 `DEFAULT_TELEMETRY_URL = ''`，保持纯本地）。全团队开启：
