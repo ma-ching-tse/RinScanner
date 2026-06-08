@@ -10,7 +10,7 @@
     "build": "npm run build:code && npm run build:ui && npm run build:html",
     "watch": "npm run build && npm run build:code -- --watch & npm run build:ui -- --watch",
     "telemetry:server": "node server/index.js",
-    "telemetry:report": "node server/report.js"
+    "telemetry:report": "node server/rinscanner-report.js"
   },
   "devDependencies": {
     "@figma/plugin-typings": "^1.100.0",

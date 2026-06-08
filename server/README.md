@@ -3,7 +3,7 @@
 零依赖（纯 Node 标准库）。两部分：
 
 1. **ingest server** (`index.js`) —— 一直跑着，收插件上报的事件，落到 `events.jsonl`。
-2. **报表 CLI** (`report.js`) —— 你想看的时候敲一条命令，**直接在终端打出文本**：谁、用了多少次、解决了什么问题。没有网页。
+2. **报表 CLI** (`rinscanner-report.js`) —— 你想看的时候敲一条命令，**直接在终端打出文本**：谁、用了多少次、解决了什么问题。没有网页。
 
 > 为什么还需要一个常驻 server？Figma 插件只能发网络请求，没法直接写共享文件，所以得有个端点接收。它很小，只有一个 `POST /telemetry`。
 
@@ -20,10 +20,10 @@ npm run telemetry:server          # 等同 node server/index.js，监听 :8787
 
 ```bash
 npm run telemetry:report                 # 全部历史
-node server/report.js --days 7           # 最近 7 天
-node server/report.js --since 24h        # 最近 24 小时（30m / 12h / 7d）
-node server/report.js --user 张三        # 只看某人
-node server/report.js --json             # 原始聚合 JSON（喂给别的脚本）
+node server/rinscanner-report.js --days 7           # 最近 7 天
+node server/rinscanner-report.js --since 24h        # 最近 24 小时（30m / 12h / 7d）
+node server/rinscanner-report.js --user 张三        # 只看某人
+node server/rinscanner-report.js --json             # 原始聚合 JSON（喂给别的脚本）
 ```
 
 输出长这样：
@@ -87,4 +87,4 @@ RinScanner 使用统计   ·   最近 7 天
 ## 数据存储
 
 `events.jsonl`：每行一个 JSON 事件，已 gitignore。备份 / 迁移直接拷文件。
-要更稳可换 SQLite / Postgres（改 `index.js` 的写入 + `report.js` 的读取）。
+要更稳可换 SQLite / Postgres（改 `index.js` 的写入 + `rinscanner-report.js` 的读取）。

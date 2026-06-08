@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // RinScanner 使用统计 — 命令行文本报表（零依赖）。
 //
-//   node server/report.js                # 全部历史
-//   node server/report.js --days 7       # 最近 7 天
-//   node server/report.js --since 24h    # 最近 24 小时（支持 30m / 12h / 7d）
-//   node server/report.js --user 张三    # 只看某人（按名字模糊匹配）
-//   node server/report.js --json         # 输出原始聚合 JSON（给脚本用）
+//   node rinscanner-report.js                # 全部历史
+//   node rinscanner-report.js --days 7       # 最近 7 天
+//   node rinscanner-report.js --since 24h    # 最近 24 小时（支持 30m / 12h / 7d）
+//   node rinscanner-report.js --user 张三    # 只看某人（按名字模糊匹配）
+//   node rinscanner-report.js --json         # 输出原始聚合 JSON（给脚本用）
 //
 // 数据来源：server/events.jsonl（由 index.js 收集），或用 DATA=... 指定。
 
