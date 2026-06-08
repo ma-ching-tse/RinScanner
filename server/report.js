@@ -53,7 +53,9 @@ function load() {
     .filter(Boolean);
 }
 
-let events = load();
+// events.jsonl 现在是 RinScanner 和 RinType 共用的。这里只统计 RinScanner 的事件：
+// 带 product:'rinscanner' 的，以及老数据（上线 product 字段之前没有该字段的事件）。
+let events = load().filter((e) => !e.product || e.product === 'rinscanner');
 
 let cutoff = sinceMs(opts.since);
 if (cutoff === undefined && opts.days) cutoff = Date.now() - opts.days * 86400e3;
