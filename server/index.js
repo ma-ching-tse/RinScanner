@@ -157,7 +157,17 @@ const server = http.createServer((req, res) => {
     const days = Number(u.searchParams.get('days')) || 7;
     const cutoff = Date.now() - days * 86400e3;
     const evs = readEvents().filter((e) => e.receivedAt && Date.parse(e.receivedAt) >= cutoff);
-    return sendJson(res, 200, { days, ...aggregate(evs) });
+    // Group by product so multiple tools (RinScanner, RinType, …) sharing this
+    // events.jsonl are reported separately. Untagged events default to
+    // 'rinscanner' (the only tool that omits the field).
+    const byProduct = {};
+    for (const e of evs) {
+      const p = e.product || 'rinscanner';
+      (byProduct[p] = byProduct[p] || []).push(e);
+    }
+    const products = {};
+    for (const p of Object.keys(byProduct)) products[p] = aggregate(byProduct[p]);
+    return sendJson(res, 200, { days, products, combined: aggregate(evs).totals });
   }
 
   res.writeHead(404, { 'Content-Type': 'text/plain', ...CORS });
