@@ -1,0 +1,27 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0C1617"/>
+      <stop offset="1" stop-color="#0F0F0F"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="24" y1="24" x2="104" y2="104" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00F8F8"/>
+      <stop offset="1" stop-color="#03B2BD"/>
+    </linearGradient>
+  </defs>
+
+  <!-- app tile -->
+  <rect width="128" height="128" rx="28" fill="url(#bg)"/>
+  <rect x="0.75" y="0.75" width="126.5" height="126.5" rx="27.25" stroke="#03B2BD" stroke-opacity="0.18" stroke-width="1.5"/>
+
+  <!-- focus / scan frame corners -->
+  <g stroke="url(#teal)" stroke-width="5" stroke-linecap="round" fill="none">
+    <path d="M34 46 V36 a2 2 0 0 1 2-2 H46"/>
+    <path d="M94 46 V36 a2 2 0 0 0 -2-2 H82"/>
+    <path d="M34 82 V92 a2 2 0 0 0 2 2 H46"/>
+    <path d="M94 82 V92 a2 2 0 0 1 -2 2 H82"/>
+  </g>
+
+  <!-- checkmark: spec passed -->
+  <path d="M47 65 L59 77 L83 49" stroke="url(#teal)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

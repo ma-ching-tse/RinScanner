@@ -1,6 +1,6 @@
 {
   "name": "RinScanner",
-  "id": "rinscanner",
+  "id": "1645738403028509042",
   "api": "1.0.0",
   "main": "dist/code.js",
   "ui": "dist/ui.html",
@@ -11,6 +11,6 @@
   "documentAccess": "dynamic-page",
   "networkAccess": {
     "allowedDomains": ["*"],
-    "reasoning": "调用内部 LLM 代理为图层生成命名建议；端点在插件设置中配置"
+    "reasoning": "两类外部请求：(1) 匿名/实名的用量统计 POST 到团队自有的遥测服务（仅发送数值摘要与文件名，不含设计内容）；(2) 可选的 AI 命名功能，把图层文字发到用户在插件设置中自行配置的 OpenAI 兼容 LLM 端点。因 LLM 端点由用户运行时填写，故域名需保持通配。"
   }
 }

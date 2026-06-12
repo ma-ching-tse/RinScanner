@@ -1,0 +1,128 @@
+<svg width="1920" height="960" viewBox="0 0 1920 960" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="cbg" x1="0" y1="0" x2="1920" y2="960" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B1415"/>
+      <stop offset="0.55" stop-color="#0C1213"/>
+      <stop offset="1" stop-color="#0F0F0F"/>
+    </linearGradient>
+    <linearGradient id="cteal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00F8F8"/>
+      <stop offset="1" stop-color="#03B2BD"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.78" cy="0.4" r="0.55">
+      <stop offset="0" stop-color="#03B2BD" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="#03B2BD" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="tile" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0C1617"/>
+      <stop offset="1" stop-color="#0F0F0F"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1920" height="960" fill="url(#cbg)"/>
+  <rect width="1920" height="960" fill="url(#glow)"/>
+
+  <!-- faint grid -->
+  <g stroke="#FFFFFF" stroke-opacity="0.025" stroke-width="1">
+    <path d="M0 240 H1920 M0 480 H1920 M0 720 H1920"/>
+    <path d="M320 0 V960 M640 0 V960 M960 0 V960 M1280 0 V960 M1600 0 V960"/>
+  </g>
+
+  <!-- ===== left: brand block ===== -->
+  <!-- app tile + scan-check mark -->
+  <g transform="translate(150,150)">
+    <rect width="200" height="200" rx="44" fill="url(#tile)"/>
+    <rect x="1.25" y="1.25" width="197.5" height="197.5" rx="42.75" stroke="#03B2BD" stroke-opacity="0.2" stroke-width="2.5"/>
+    <g transform="scale(1.5625)"> <!-- 200/128 -->
+      <g stroke="url(#cteal)" stroke-width="5" stroke-linecap="round" fill="none">
+        <path d="M34 46 V36 a2 2 0 0 1 2-2 H46"/>
+        <path d="M94 46 V36 a2 2 0 0 0 -2-2 H82"/>
+        <path d="M34 82 V92 a2 2 0 0 0 2 2 H46"/>
+        <path d="M94 82 V92 a2 2 0 0 1 -2 2 H82"/>
+      </g>
+      <path d="M47 65 L59 77 L83 49" stroke="url(#cteal)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </g>
+  </g>
+
+  <text x="150" y="455" font-family="Inter, Helvetica, Arial, sans-serif" font-size="104" font-weight="800" fill="#F3F3F3" letter-spacing="-2">RinScanner</text>
+  <text x="153" y="530" font-family="Inter, Helvetica, Arial, sans-serif" font-size="40" font-weight="500" fill="#03B2BD">Figma 设计规范检查 · 一键扫描 · 一键修复</text>
+
+  <text x="153" y="620" font-family="Inter, Helvetica, Arial, sans-serif" font-size="32" font-weight="400" fill="#9AA7A8">扫出未绑定 token 的颜色 / 字体、不规范布局、默认命名，</text>
+  <text x="153" y="666" font-family="Inter, Helvetica, Arial, sans-serif" font-size="32" font-weight="400" fill="#9AA7A8">并直接帮你修好——让 Dev Mode / MCP 出码不再硬编码。</text>
+
+  <!-- dimension pills -->
+  <g font-family="Inter, Helvetica, Arial, sans-serif" font-size="34" font-weight="600">
+    <g transform="translate(153,740)">
+      <rect width="200" height="76" rx="38" fill="#03B2BD" fill-opacity="0.12" stroke="#03B2BD" stroke-opacity="0.5" stroke-width="2"/>
+      <text x="100" y="50" text-anchor="middle" fill="#00F8F8">Token</text>
+    </g>
+    <g transform="translate(373,740)">
+      <rect width="200" height="76" rx="38" fill="#03B2BD" fill-opacity="0.12" stroke="#03B2BD" stroke-opacity="0.5" stroke-width="2"/>
+      <text x="100" y="50" text-anchor="middle" fill="#00F8F8">布局</text>
+    </g>
+    <g transform="translate(593,740)">
+      <rect width="240" height="76" rx="38" fill="#03B2BD" fill-opacity="0.12" stroke="#03B2BD" stroke-opacity="0.5" stroke-width="2"/>
+      <text x="120" y="50" text-anchor="middle" fill="#00F8F8">命名 · AI</text>
+    </g>
+  </g>
+
+  <!-- ===== right: mock result panel ===== -->
+  <g transform="translate(1230,210)">
+    <rect width="540" height="560" rx="24" fill="#101A1B" stroke="#FFFFFF" stroke-opacity="0.07" stroke-width="2"/>
+    <!-- panel header -->
+    <text x="36" y="64" font-family="Inter, Helvetica, Arial, sans-serif" font-size="30" font-weight="700" fill="#F3F3F3">扫描结果</text>
+    <g transform="translate(404,40)">
+      <rect width="100" height="40" rx="20" fill="#03B2BD" fill-opacity="0.15"/>
+      <text x="50" y="27" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#00F8F8">12 项</text>
+    </g>
+    <line x1="36" y1="92" x2="504" y2="92" stroke="#FFFFFF" stroke-opacity="0.07" stroke-width="2"/>
+
+    <!-- rows -->
+    <g font-family="Inter, Helvetica, Arial, sans-serif">
+      <!-- row 1: color -->
+      <g transform="translate(36,120)">
+        <rect width="40" height="40" rx="8" fill="#E8553C"/>
+        <text x="60" y="18" font-size="24" font-weight="600" fill="#F3F3F3">#E8553C</text>
+        <text x="60" y="46" font-size="20" fill="#9AA7A8">→ Function/CEX/Sell</text>
+        <g transform="translate(360,2)"><rect width="108" height="40" rx="10" fill="url(#cteal)"/><text x="54" y="27" text-anchor="middle" font-size="20" font-weight="700" fill="#06201F">应用</text></g>
+      </g>
+      <!-- row 2: font -->
+      <g transform="translate(36,196)">
+        <rect width="40" height="40" rx="8" fill="#1A2A2B" stroke="#03B2BD" stroke-opacity="0.4" stroke-width="2"/>
+        <text x="54" y="27" text-anchor="middle" font-size="22" font-weight="800" fill="#00F8F8">A</text>
+        <text x="60" y="18" font-size="24" font-weight="600" fill="#F3F3F3">15 / 22</text>
+        <text x="60" y="46" font-size="20" fill="#9AA7A8">→ Body / Regular</text>
+        <g transform="translate(360,2)"><rect width="108" height="40" rx="10" fill="url(#cteal)"/><text x="54" y="27" text-anchor="middle" font-size="20" font-weight="700" fill="#06201F">应用</text></g>
+      </g>
+      <!-- row 3: layout -->
+      <g transform="translate(36,272)">
+        <rect width="40" height="40" rx="8" fill="#1A2A2B"/>
+        <path d="M12 20 H28 M20 12 V28" stroke="#00F8F8" stroke-width="3" stroke-linecap="round"/>
+        <text x="60" y="18" font-size="24" font-weight="600" fill="#F3F3F3">Group → Auto-layout</text>
+        <text x="60" y="46" font-size="20" fill="#9AA7A8">布局不规范 · 已定位</text>
+        <g transform="translate(360,2)"><rect width="108" height="40" rx="10" fill="none" stroke="#9AA7A8" stroke-opacity="0.5" stroke-width="2"/><text x="54" y="27" text-anchor="middle" font-size="20" font-weight="600" fill="#9AA7A8">定位</text></g>
+      </g>
+      <!-- row 4: naming -->
+      <g transform="translate(36,348)">
+        <rect width="40" height="40" rx="8" fill="#1A2A2B"/>
+        <text x="20" y="27" text-anchor="middle" font-size="22" fill="#00F8F8">✦</text>
+        <text x="60" y="18" font-size="24" font-weight="600" fill="#F3F3F3">Frame 427</text>
+        <text x="60" y="46" font-size="20" fill="#9AA7A8">→ PriceCardHeader</text>
+        <g transform="translate(360,2)"><rect width="108" height="40" rx="10" fill="url(#cteal)"/><text x="54" y="27" text-anchor="middle" font-size="20" font-weight="700" fill="#06201F">改名</text></g>
+      </g>
+      <!-- row 5 -->
+      <g transform="translate(36,424)">
+        <rect width="40" height="40" rx="8" fill="#3FB950"/>
+        <text x="60" y="18" font-size="24" font-weight="600" fill="#F3F3F3">#03B2BD</text>
+        <text x="60" y="46" font-size="20" fill="#9AA7A8">→ Function/CEX/Brand</text>
+        <g transform="translate(360,2)"><rect width="108" height="40" rx="10" fill="url(#cteal)"/><text x="54" y="27" text-anchor="middle" font-size="20" font-weight="700" fill="#06201F">应用</text></g>
+      </g>
+    </g>
+
+    <!-- footer scan button -->
+    <g transform="translate(36,494)">
+      <rect width="468" height="48" rx="12" fill="url(#cteal)"/>
+      <text x="234" y="32" text-anchor="middle" font-family="Inter, Helvetica, Arial, sans-serif" font-size="24" font-weight="800" fill="#06201F">重新扫描</text>
+    </g>
+  </g>
+</svg>

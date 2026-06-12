@@ -1,0 +1,36 @@
+﻿分组,Figma 变量名,代码 Token (Web Code Syntax),Light,Dark
+文本 Text,Text/Primary,var(--color-bm-text-primary),#0f0f0f,#f3f3f3
+文本 Text,Text/Secondary,var(--color-bm-text-secondary),#b0b0b0,#787878
+文本 Text,Text/Third,var(--color-bm-text-tertiary),#cccccc,#4d4d4d
+文本 Text,Text/Btn Text,var(--color-bm-text-button),#ffffff,#1c1e1f
+背景边框 Bg,Bg/Bg,var(--color-bm-bg-page),#ffffff,#000000
+背景边框 Bg,Bg/Dialog Drawer Bg,var(--color-bm-bg-dialog),#ffffff,#141517
+背景边框 Bg,Bg/Bgline,var(--color-bm-bg-input-overlay),#f3f4f7,#262729
+背景边框 Bg,Bg/Bgline2,var(--color-bm-bg-input-page),#f4f4f4,#1b1d1f
+背景边框 Bg,Bg/Pop,var(--color-bm-bg-tooltip),#363636,#e5e5e5
+背景边框 Bg,Bg/Tab Select,var(--color-bm-bg-tab-selected),#e8e8e9,#2c2f32
+背景边框 Bg,Bg/Border,var(--color-bm-border-default),#e8e8e9,#2c2f32
+背景边框 Bg,Bg/Divider,var(--color-bm-border-divider),#f3f4f7,#2c2f32
+背景边框 Bg,Bg/Mask,var(--color-bm-bg-mask),#000000b2,#000000b2
+背景边框 Bg,Bg/Carousel,var(--color-bm-carousel-indicator),#ffffff33,#1a1b1f33
+背景边框 Bg,Bg/Carousel 2,var(--color-bm-carousel-indicator-2),#ffffff00,#1a1b1f00
+功能色 CEX,Function/CEX/Brand,var(--color-bm-function-cex-brand),#03b2bd,#00f8f8
+功能色 CEX,Function/CEX/Brand bg,var(--color-bm-function-cex-brand-bg),#03b2bd1a,#00f8f833
+功能色 CEX,Function/CEX/Buy,var(--color-bm-function-cex-buy),#13c287,#13c287
+功能色 CEX,Function/CEX/Buy bg,var(--color-bm-function-cex-buy-bg),#13c2871a,#13c28733
+功能色 CEX,Function/CEX/Sell,var(--color-bm-function-cex-sell),#fa3b61,#fa3b61
+功能色 CEX,Function/CEX/Sell bg,var(--color-bm-function-cex-sell-bg),#fa3b611a,#fa3b6133
+功能色 CEX,Function/CEX/Warning,var(--color-bm-function-cex-warning),#f19d1e,#f19d1e
+功能色 CEX,Function/CEX/Warning bg,var(--color-bm-function-cex-warning-bg),#f19d1e1a,#f19d1e33
+功能色 DEX,Function/DEX/Brand,var(--color-bm-function-dex-brand),#62ac1d,#a0ff46
+功能色 DEX,Function/DEX/Brand bg,var(--color-bm-function-dex-brand-bg),#62ac1d1a,#a0ff4633
+功能色 DEX,Function/DEX/Brand Popup,var(--color-bm-function-dex-brand-popup),#62ac1d66,#a0ff4666
+功能色 DEX,Function/DEX/Buy,var(--color-bm-function-dex-buy),#5eac1d,#a0ff46
+功能色 DEX,Function/DEX/Buy bg,var(--color-bm-function-dex-buy-bg),#5eac1d1a,#a0ff4633
+功能色 DEX,Function/DEX/Sell,var(--color-bm-function-dex-sell),#c32574,#ff5eae
+功能色 DEX,Function/DEX/Sell bg,var(--color-bm-function-dex-sell-bg),#c325741a,#ff5eae33
+功能色 DEX,Function/DEX/Warning,var(--color-bm-function-dex-warning),#f19d1e,#f19d1e
+功能色 DEX,Function/DEX/Warning bg,var(--color-bm-function-dex-warning-bg),#f19d1e1a,#f19d1e33
+功能色 DEX,Function/DEX/Fail,var(--color-bm-function-dex-fail),#fa3b61,#fa3b61
+功能色 DEX,Function/DEX/Fail bg,var(--color-bm-function-dex-fail-bg),#fa3b611a,#fa3b6133
+功能色 DEX,Function/DEX/Fail Popup,var(--color-bm-function-dex-fail-popup),#fa3b6166,#fa3b6166

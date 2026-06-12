@@ -19,7 +19,7 @@ const violationsById = new Map<string, Violation>();
 let currentTokens: TokenIndex | null = null;
 let platformFilter: PlatformFilterValue = 'APP';
 let whitelist: string[] = [];
-let scanCategories: ScanCategorySelection = { token: true, autolayout: true, naming: true };
+let scanCategories: ScanCategorySelection = { token: true, autolayout: false, naming: false };
 
 // Team-wide defaults — colleagues only need to paste their own API key.
 const DEFAULT_LLM_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
@@ -113,14 +113,11 @@ function isValidFilter(v: unknown): v is PlatformFilterValue {
 function normalizeCategories(v: unknown): ScanCategorySelection | null {
   if (!v || typeof v !== 'object') return null;
   const o = v as Record<string, unknown>;
-  const cats = {
-    token: o.token !== false,
-    autolayout: o.autolayout !== false,
-    naming: o.naming !== false,
-  };
-  // At least one must be on.
-  if (!cats.token && !cats.autolayout && !cats.naming) cats.token = true;
-  return cats;
+  // Single-select: exactly one category is on (priority token > autolayout > naming).
+  if (o.token === true) return { token: true, autolayout: false, naming: false };
+  if (o.autolayout === true) return { token: false, autolayout: true, naming: false };
+  if (o.naming === true) return { token: false, autolayout: false, naming: true };
+  return { token: true, autolayout: false, naming: false };
 }
 
 function post(msg: PluginMessage) {
@@ -346,6 +343,35 @@ figma.ui.onmessage = async (msg: UIMessage) => {
           error: err instanceof Error ? err.message : String(err),
         });
       }
+    } else if (msg.type === 'applyAllRenames') {
+      let ok = 0;
+      let fail = 0;
+      for (const item of msg.items) {
+        const v = violationsById.get(item.violationId);
+        if (!v) {
+          post({ type: 'fixApplied', violationId: item.violationId, ok: false, error: 'Violation not found' });
+          fail++;
+          continue;
+        }
+        try {
+          const node = await figma.getNodeByIdAsync(v.nodeId);
+          if (!node || !('name' in node)) throw new Error('节点不存在');
+          (node as SceneNode).name = item.name;
+          violationsById.delete(item.violationId);
+          telemetry.track({ event: 'fix', fixKind: 'rename' });
+          post({ type: 'fixApplied', violationId: item.violationId, ok: true });
+          ok++;
+        } catch (err) {
+          post({
+            type: 'fixApplied',
+            violationId: item.violationId,
+            ok: false,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          fail++;
+        }
+      }
+      if (ok > 0) figma.notify(`已重命名 ${ok} 个图层${fail ? `，${fail} 个失败` : ''}`);
     } else if (msg.type === 'selectNode') {
       const node = await figma.getNodeByIdAsync(msg.nodeId);
       if (node && 'type' in node && node.type !== 'PAGE' && node.type !== 'DOCUMENT') {
