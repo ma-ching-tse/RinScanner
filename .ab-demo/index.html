@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RinScanner A/B — 出码渲染对比</title>
+<style>
+  /* ---- BMDS color tokens, two themes. ONLY the B (tokenized) code reads these. ---- */
+  .theme-light{
+    --color-bm-bg-page:#ffffff;
+    --color-bm-text-primary:#0f0f0f;
+    --color-bm-text-secondary:#b0b0b0;
+    --color-bm-text-tertiary:#cccccc;
+    --color-bm-border-default:#e8e8e9;
+    --color-bm-bg-input-page:#f4f4f4;
+    --color-bm-function-cex-brand:#03b2bd;
+    --color-bm-function-cex-buy:#13c287;
+    --color-bm-text-button:#ffffff;
+    --page-bg:#eef0f3;
+  }
+  .theme-dark{
+    --color-bm-bg-page:#181a1f;
+    --color-bm-text-primary:#f4f5f7;
+    --color-bm-text-secondary:#8b919b;
+    --color-bm-text-tertiary:#5b626c;
+    --color-bm-border-default:#2c313a;
+    --color-bm-bg-input-page:#23272e;
+    --color-bm-function-cex-brand:#03b2bd;
+    --color-bm-function-cex-buy:#13c287;
+    --color-bm-text-button:#ffffff;
+    --page-bg:#0c0e12;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;}
+  body{background:#1b1d22;color:#e8eaed;padding:28px;}
+  h1{font-size:20px;margin-bottom:4px;}
+  .sub{color:#9aa0a8;font-size:13px;margin-bottom:24px;line-height:1.6;}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:#9aa0a8;margin-bottom:24px;}
+  .legend b{color:#e8eaed;}
+
+  .row{margin-bottom:34px;}
+  .row-head{font-size:14px;font-weight:600;margin-bottom:4px;}
+  .row-note{font-size:12px;color:#9aa0a8;margin-bottom:14px;}
+  .pair{display:flex;gap:24px;flex-wrap:wrap;}
+  .panel{flex:0 0 auto;}
+  .panel-label{font-size:12px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+  .dot.a{background:#ff5d5d;} .dot.b{background:#22c55e;}
+  .verdict{font-size:11px;color:#9aa0a8;margin-top:8px;max-width:360px;line-height:1.5;}
+  .stage{padding:16px;border-radius:14px;background:var(--page-bg);width:392px;}
+
+  /* ===== shared modal visuals ===== */
+  .card{width:360px;border-radius:16px;box-shadow:0 2px 5px rgba(0,0,0,.2);padding:24px;}
+  .crow{display:flex;align-items:center;gap:8px;}
+  .btc{width:26px;height:26px;border-radius:50%;background:#f7931a;color:#fff;font-weight:700;
+       display:flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 auto;}
+  .title{font-size:18px;font-weight:600;flex:1;}
+  .x{font-size:18px;}
+  .label{font-size:15px;font-weight:600;margin:20px 0 10px;}
+  .chip{border:1px solid;border-radius:8px;padding:10px 12px;width:96px;}
+  .chip .pct{font-size:15px;font-weight:600;}
+  .chip .flex{font-size:12px;margin-top:6px;}
+  .amt-head{display:flex;align-items:center;justify-content:space-between;}
+  .muted{font-size:13px;}
+  .input{display:flex;align-items:center;gap:8px;height:52px;border-radius:8px;padding:0 12px;margin-top:10px;}
+  .input .ph{flex:1;font-size:15px;}
+  .divider{width:1px;height:20px;}
+  .brand{font-weight:500;}
+  .helper{display:flex;align-items:center;justify-content:space-between;font-size:13px;margin-top:10px;}
+  .ibox{border:1px solid;border-radius:8px;padding:14px;margin-top:18px;}
+  .ibox-head{display:flex;align-items:center;justify-content:space-between;}
+  .ibox-head .l{font-size:15px;font-weight:500;}
+  .buy{font-size:15px;font-weight:500;text-decoration:underline;text-decoration-style:dotted;}
+  .btn{height:52px;border-radius:9999px;display:flex;align-items:center;justify-content:center;
+       font-size:15px;font-weight:600;margin-top:22px;}
+
+  /* ===== B (tokenized + flex) — reads CSS variables ===== */
+  .B .card{background:var(--color-bm-bg-page);}
+  .B .title,.B .x,.B .label,.B .chip .pct,.B .amt-head .l,.B .input .val,
+  .B .helper .r,.B .ibox-head .l{color:var(--color-bm-text-primary);}
+  .B .chip .flex,.B .input .ph,.B .muted,.B .helper .l{color:var(--color-bm-text-secondary);}
+  .B .chip{border-color:var(--color-bm-text-primary);}
+  .B .input{background:var(--color-bm-bg-input-page);}
+  .B .divider{background:var(--color-bm-border-default);}
+  .B .brand{color:var(--color-bm-function-cex-brand);}
+  .B .ibox{border-color:var(--color-bm-border-default);}
+  .B .buy{color:var(--color-bm-function-cex-buy);}
+  .B .btn{background:var(--color-bm-function-cex-brand);color:var(--color-bm-text-button);}
+
+  /* ===== A (hardcoded hex + absolute) — ignores the theme entirely ===== */
+  .A .card{background:#ffffff;}
+  .A .title,.A .x,.A .label,.A .chip .pct,.A .amt-head .l,.A .input .val,
+  .A .helper .r,.A .ibox-head .l{color:#0f0f0f;}
+  .A .chip .flex,.A .input .ph,.A .muted,.A .helper .l{color:#b0b0b0;}
+  .A .chip{border-color:#0f0f0f;}
+  .A .input{background:#f4f4f4;}
+  .A .divider{background:#e8e8e9;}
+  .A .brand{color:#03b2bd;}
+  .A .ibox{border-color:#e8e8e9;}
+  .A .buy{color:#13c287;}
+  .A .btn{background:#03b2bd;color:#ffffff;}
+
+  /* ===== layout regimes ===== */
+  /* B interest header = flex (reflows) */
+  .B .ibox-head{display:flex;gap:8px;}
+  .B .ibox-head .l{flex:1;min-width:0;}
+  /* A interest header = absolute positioning (fixed left offsets, nowrap) like the generated code */
+  .A .ibox-head{position:relative;height:24px;display:block;}
+  .A .ibox-head .l{position:absolute;left:0;top:0;white-space:nowrap;}
+  .A .ibox-head .buy{position:absolute;left:240px;top:0;white-space:nowrap;}
+
+  /* i18n stress: longer label */
+  .long .ibox-head .l::after{content:" — geschätzter täglicher Zinsertrag";}
+</style>
+</head>
+<body>
+  <h1>RinScanner A/B — 同一设计,两份出码,渲染对比</h1>
+  <div class="sub">
+    左 = <b>A(乱稿出码)</b>:颜色写死 hex、布局绝对定位。&nbsp; 右 = <b>B(整理后出码)</b>:颜色 <code>var(--color-bm-*)</code> token、布局 flex。<br>
+    两份都是 Figma MCP 真实生成的代码,这里按其语义如实渲染。静态浅色下故意做到一样——区别在真实工程条件下才暴露。
+  </div>
+  <div class="legend">
+    <span><b>TOKEN 轴 →</b> 看「深色主题」行</span>
+    <span><b>布局轴 →</b> 看「长文案 / i18n」行</span>
+    <span><span class="dot a"></span> A 乱版</span>
+    <span><span class="dot b"></span> B 干净版</span>
+  </div>
+
+  <div class="row" id="r-light">
+    <div class="row-head">① 浅色主题(基准)</div>
+    <div class="row-note">两份代码渲染一致 —— 证明 A/B 内容、视觉完全相同,对比是公平的。</div>
+    <div class="pair"></div>
+  </div>
+
+  <div class="row" id="r-dark">
+    <div class="row-head">② 深色主题(切一下主题就见真章)</div>
+    <div class="row-note">同样的页面,把设计系统切到深色。B 的 token 自动跟随;A 写死的 hex 纹丝不动 —— 深色背景里一张刺眼白卡,文字配色全错。</div>
+    <div class="pair"></div>
+  </div>
+
+  <div class="row long" id="r-i18n">
+    <div class="row-head">③ 长文案 / i18n(浅色,文案变长)</div>
+    <div class="row-note">同一处文字换成更长的德语翻译。B 的 flex 自动重排;A 的绝对定位 + 固定偏移 → 文字直接重叠。</div>
+    <div class="pair"></div>
+  </div>
+
+<script>
+function modal(mode){
+  return `
+  <div class="card">
+    <div class="crow">
+      <div class="btc">₿</div>
+      <div class="title">BTC Flexible Savings</div>
+      <div class="x">✕</div>
+    </div>
+    <div class="label">Select Duration</div>
+    <div class="chip">
+      <div class="pct">10.00%</div>
+      <div class="flex">Flexible</div>
+    </div>
+    <div class="label">Subscription Amount</div>
+    <div class="input">
+      <span class="ph">≥ 0.01</span>
+      <span class="val">BTC</span>
+      <span class="divider"></span>
+      <span class="brand">Max</span>
+    </div>
+    <div class="helper"><span class="l">Available</span><span class="r">390.90104186 BTC</span></div>
+    <div class="ibox">
+      <div class="ibox-head">
+        <span class="l">Est. Daily Interest</span>
+        <span class="buy">0.272911 BTC</span>
+      </div>
+    </div>
+    <div class="btn">Subscribe</div>
+  </div>`;
+}
+function panel(mode, theme){
+  const tag = mode==='A' ? 'A 乱版(写死 hex / 绝对定位)' : 'B 干净版(token / flex)';
+  return `<div class="panel">
+    <div class="panel-label"><span class="dot ${mode.toLowerCase()}"></span>${tag}</div>
+    <div class="stage theme-${theme}"><div class="${mode}">${modal(mode)}</div></div>
+  </div>`;
+}
+document.querySelector('#r-light .pair').innerHTML = panel('A','light')+panel('B','light');
+document.querySelector('#r-dark  .pair').innerHTML = panel('A','dark') +panel('B','dark');
+document.querySelector('#r-i18n  .pair').innerHTML = panel('A','light')+panel('B','light');
+</script>
+</body>
+</html>

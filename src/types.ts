@@ -123,6 +123,7 @@ export type UIMessage =
   | { type: 'applyLayoutFix'; violationId: string }
   | { type: 'requestNamingSuggestions' }
   | { type: 'applyRename'; violationId: string; name: string }
+  | { type: 'applyAllRenames'; items: { violationId: string; name: string }[] }
   | { type: 'setLlmConfig'; baseUrl: string; apiKey: string; model: string };
 
 export interface LlmConfigPublic {

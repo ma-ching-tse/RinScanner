@@ -42,7 +42,7 @@ const state: State = {
   tokens: { colors: [], textStyles: [], dataSource: null, loaded: false },
   platformFilter: 'APP',
   platformDivergence: false,
-  scanCategories: { token: true, autolayout: true, naming: true },
+  scanCategories: { token: true, autolayout: false, naming: false },
   view: 'scan',
   tokenFilter: '',
   llmConfig: { configured: false, baseUrl: '', model: '', hasKey: false },
@@ -350,7 +350,30 @@ function renderSettingsView(): string {
     </div>`;
 }
 
+// Selectors for the scrollable containers, one per view. render() rebuilds
+// root.innerHTML wholesale, which resets scroll to the top — most visibly when
+// clicking 定位 triggers a selectionChanged re-render and the user loses their
+// place mid-list. render() snapshots the active container's scrollTop and
+// restores it onto the matching container after the rebuild.
+const SCROLL_SELECTORS = ['.list', '.view-scroll'];
+
 function render() {
+  let prev: { sel: string; top: number } | null = null;
+  for (const sel of SCROLL_SELECTORS) {
+    const el = root.querySelector(sel) as HTMLElement | null;
+    if (el) {
+      prev = { sel, top: el.scrollTop };
+      break;
+    }
+  }
+  renderView();
+  if (prev && prev.top > 0) {
+    const el = root.querySelector(prev.sel) as HTMLElement | null;
+    if (el) el.scrollTop = prev.top;
+  }
+}
+
+function renderView() {
   if (state.view === 'tokens') {
     root.innerHTML = renderTokenView();
     return;
@@ -393,14 +416,19 @@ function render() {
   let listHtml = '';
   if (state.status === 'done') {
     if (state.violations.length === 0) {
-      listHtml = `<div class="empty">🎉 选区内颜色、字体、布局、命名都没发现问题。</div>`;
+      listHtml = `<div class="empty">🎉 选区内本项检查没发现问题。</div>`;
     } else {
       listHtml += groupBlock('颜色', colorViolations);
       listHtml += groupBlock('字体', textViolations);
       listHtml += groupBlock('布局 (auto-layout)', layoutViolations);
       if (namingViolations.length > 0) {
+        const readyCount = namingViolations.filter((v) => state.namingSuggestions[v.id]?.name).length;
         const aiBtn = `<button class="link-btn" data-action="ai-naming">✨ AI 命名建议</button>`;
-        listHtml += `<div class="group">命名 (${namingViolations.length}) ${aiBtn}</div>`;
+        const applyAllBtn =
+          readyCount > 0
+            ? `<button class="link-btn" data-action="apply-all-renames">✓ 全部采纳 (${readyCount})</button>`
+            : '';
+        listHtml += `<div class="group">命名 (${namingViolations.length}) ${aiBtn}${applyAllBtn}</div>`;
         listHtml += namingViolations.map(renderCard).join('');
       }
     }
@@ -441,20 +469,37 @@ function render() {
     { key: 'autolayout', label: '布局' },
     { key: 'naming', label: '命名' },
   ];
+  // Single-select segmented switch: scan exactly one dimension at a time.
   const categoryRow = `<div class="topbar-row">
     <span class="muted" style="font-size:10px">扫描:</span>
-    <div class="cat-toggles">${catDefs
+    <div class="seg">${catDefs
       .map(
         (c) =>
-          `<button class="cat-chip ${state.scanCategories[c.key] ? 'on' : ''}" data-action="toggle-category" data-cat="${c.key}">${state.scanCategories[c.key] ? '✓ ' : ''}${c.label}</button>`,
+          `<button class="seg-btn ${state.scanCategories[c.key] ? 'active' : ''}" data-action="toggle-category" data-cat="${c.key}" ${state.scanCategories[c.key] ? 'aria-current="true"' : ''}>${c.label}</button>`,
       )
       .join('')}</div>
   </div>`;
 
+  // Prominent batch-action bar for naming mode: appears after a scan finds
+  // naming issues. One click to suggest for all, then one click to apply all.
+  let namingActionBar = '';
+  if (state.status === 'done' && state.scanCategories.naming && namingViolations.length > 0) {
+    const readyCount = namingViolations.filter((v) => state.namingSuggestions[v.id]?.name).length;
+    const loadingCount = namingViolations.filter((v) => state.namingSuggestions[v.id]?.loading).length;
+    if (readyCount > 0) {
+      namingActionBar = `<button class="batch-btn" data-action="apply-all-renames">✓ 一键修复全部命名 (${readyCount})</button>`;
+    } else if (loadingCount > 0) {
+      namingActionBar = `<button class="batch-btn" disabled>AI 生成建议中… (${loadingCount})</button>`;
+    } else {
+      namingActionBar = `<button class="batch-btn" data-action="ai-naming">✨ AI 生成全部命名建议 (${namingViolations.length})</button>`;
+    }
+    namingActionBar = `<div class="topbar-row">${namingActionBar}</div>`;
+  }
+
   root.innerHTML = `
     <div class="topbar">
       <div class="topbar-row">
-        <div class="title">Token Scanner</div>
+        <div class="title">RinScanner</div>
         <button class="icon-btn" data-action="open-settings" title="LLM 命名设置">⚙</button>
         <button class="scan-btn" data-action="scan" ${canScan ? '' : 'disabled'}>${scanning ? '扫描中…' : '扫描选中画板'}</button>
       </div>
@@ -462,6 +507,7 @@ function render() {
       ${platformRow}
       ${tokenEntry}
       ${stats}
+      ${namingActionBar}
       ${progressBar}
     </div>
     ${renderWhitelistPanel()}
@@ -503,13 +549,13 @@ root.addEventListener('click', (e) => {
     send({ type: 'applyLayoutFix', violationId: btn.dataset.id! });
   } else if (action === 'toggle-category') {
     const cat = btn.dataset.cat as keyof ScanCategorySelection;
-    const next = { ...state.scanCategories, [cat]: !state.scanCategories[cat] };
-    // Keep at least one category on.
-    if (next.token || next.autolayout || next.naming) {
-      state.scanCategories = next;
-      render();
-      send({ type: 'setScanCategories', categories: next });
-    }
+    if (state.scanCategories[cat]) return; // already the active one
+    // Single-select: turn this one on, the others off.
+    const next: ScanCategorySelection = { token: false, autolayout: false, naming: false };
+    next[cat] = true;
+    state.scanCategories = next;
+    render();
+    send({ type: 'setScanCategories', categories: next });
   } else if (action === 'view-tokens') {
     state.view = 'tokens';
     render();
@@ -533,6 +579,12 @@ root.addEventListener('click', (e) => {
     }
   } else if (action === 'apply-rename') {
     send({ type: 'applyRename', violationId: btn.dataset.id!, name: btn.dataset.name! });
+  } else if (action === 'apply-all-renames') {
+    const items = state.violations
+      .filter((v) => v.category === 'naming')
+      .map((v) => ({ violationId: v.id, name: state.namingSuggestions[v.id]?.name }))
+      .filter((x): x is { violationId: string; name: string } => !!x.name);
+    if (items.length > 0) send({ type: 'applyAllRenames', items });
   } else if (action === 'reload-tokens') {
     e.stopPropagation();
     state.tokens.loaded = false;

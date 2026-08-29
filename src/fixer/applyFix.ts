@@ -1,4 +1,5 @@
 import { findBmdsToken, parseBmdsTokenId } from '../tokens/bmds';
+import { findColorVariableByName } from './variableBind';
 import { Violation } from '../types';
 
 function hexToRgb01(hex: string): { r: number; g: number; b: number } {
@@ -35,15 +36,29 @@ async function applyBmdsColorFix(violation: Violation, tokenId: string): Promise
   const current = next[idx];
   if (!current || current.type !== 'SOLID') throw new Error('Target paint is not solid');
 
-  const rgb = hexToRgb01(variant.hex);
+  // Prefer binding to the actual Figma variable — that's what makes Dev Mode /
+  // MCP emit a token name instead of a hardcoded value. The variable also
+  // resolves the right value per mode (light/dark) automatically.
+  const varName = `${parsed.group}/${parsed.name}`;
+  const variable = await findColorVariableByName(varName);
+
+  if (variable) {
+    next[idx] = figma.variables.setBoundVariableForPaint(current as SolidPaint, 'color', variable);
+    target[field] = next;
+    return;
+  }
+
+  // Fallback: no BMDS variable available in this file — snap to the exact value
+  // (correct, but stays a raw value; tell the user it isn't bound).
   next[idx] = {
     type: 'SOLID',
-    color: rgb,
+    color: hexToRgb01(variant.hex),
     opacity: variant.alpha,
     visible: current.visible,
     blendMode: current.blendMode,
   };
   target[field] = next;
+  figma.notify('未找到对应 Figma 变量，已改为精确值（未绑定）。需文件中可用 BMDS 变量库才能绑定。');
 }
 
 export async function applyFix(violation: Violation, tokenId: string): Promise<void> {

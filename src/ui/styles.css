@@ -131,6 +131,11 @@ html, body { margin: 0; padding: 0; font: 11px/1.4 -apple-system, BlinkMacSystem
 .cat-chip:hover { border-color: var(--brand); }
 .cat-chip.on { background: var(--brand); color: var(--brand-text); border-color: var(--brand); }
 
+/* Full-width batch action (naming mode) */
+.batch-btn { width: 100%; padding: 7px 12px; border: none; border-radius: 6px; background: var(--brand); color: var(--brand-text); font-size: 11px; font-weight: 600; cursor: pointer; }
+.batch-btn:hover:not(:disabled) { filter: brightness(1.1); }
+.batch-btn:disabled { opacity: 0.5; cursor: default; }
+
 /* AI-suggest link button in the naming group header */
 .link-btn { float: right; border: none; background: transparent; color: var(--brand); cursor: pointer; font-size: 10px; font-weight: 600; padding: 0; text-transform: none; letter-spacing: 0; }
 .link-btn:hover { text-decoration: underline; }

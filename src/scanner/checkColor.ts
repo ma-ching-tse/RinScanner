@@ -113,8 +113,11 @@ export function checkNodeColors(
       const alpha = paint.opacity ?? 1;
       const suggestion = suggestForPaint(hex, alpha, tokens, byKey);
 
-      // Skip when paint matches a token exactly — already "token-equivalent".
-      if (suggestion && suggestion.confidence === 'exact') return;
+      // An unbound raw value — even if it equals a token, MCP/Dev Mode hardcodes
+      // it because it isn't bound to a variable. Always flag; the fix binds the
+      // variable. (We used to gate this on variable availability, but that check
+      // was unreliable in working files and silently dropped real violations.)
+      const unboundButCorrect = !!(suggestion && suggestion.confidence === 'exact');
 
       const displayValue = alpha < 1 ? `${hex} · ${Math.round(alpha * 100)}%` : hex;
       violations.push({
@@ -124,6 +127,7 @@ export function checkNodeColors(
         category: 'token',
         kind: target.field === 'fills' ? 'color-fill' : 'color-stroke',
         currentValue: displayValue,
+        message: unboundButCorrect ? '值对但未绑定变量，MCP 会硬编码 — 建议绑定' : undefined,
         paintIndex: index,
         colorHex: hex,
         colorAlpha: alpha,
